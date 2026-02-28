@@ -220,6 +220,7 @@ export default function Home() {
             onChange={setGeneratedDoc}
             onRefine={handleRefine}
             config={config}
+            glossaryData={glossaryData}
           />
         )}
       </main>
