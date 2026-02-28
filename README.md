@@ -1,6 +1,6 @@
 # DocCraft AI — Intelligent Documentation Generator
 
-> **Live demo:** Deployed on Vercel — see your deployment URL in the Vercel dashboard.
+> **Live demo:** [doccraft-ten.vercel.app](https://doccraft-ten.vercel.app/)
 > **GitHub:** [github.com/SulagnaSasmal/Doccraft](https://github.com/SulagnaSasmal/Doccraft)
 
 Transform raw content into polished, structured documentation using AI. Feed it meeting notes, specs, screenshots, or any raw material — it analyzes gaps like a senior technical writer, asks clarifying questions, then generates publication-ready documentation with built-in Microsoft Style Guide compliance.
