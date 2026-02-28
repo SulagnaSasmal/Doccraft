@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import {
   Download,
@@ -81,8 +81,7 @@ export default function DocumentEditor({
     }
   };
 
-  const exportHTML = () => {
-    const htmlContent = `<!DOCTYPE html>
+  const buildHTMLExport = () => `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -114,6 +113,7 @@ export default function DocumentEditor({
   th { background: #f8f9fc; font-weight: 600; }
   .footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #e8ecf4;
             font-size: 0.8rem; color: #8494b2; }
+  @media print { .footer { display: none; } }
 </style>
 </head>
 <body>
@@ -122,8 +122,7 @@ ${markdownToBasicHTML(content)}
 </body>
 </html>`;
 
-    downloadFile(htmlContent, "documentation.html", "text/html");
-  };
+  const exportHTML = () => downloadFile(buildHTMLExport(), "documentation.html", "text/html");
 
   const exportMarkdown = () => {
     downloadFile(content, "documentation.md", "text/markdown");
@@ -145,11 +144,18 @@ ${markdownToBasicHTML(content)}
     setTimeout(() => setCopied(false), 2000);
   };
 
-  const handleComplianceCheck = async () => {
-    if (showCompliance && complianceRan) {
-      setShowCompliance(false);
-      return;
+  const exportPDF = () => {
+    const htmlContent = buildHTMLExport();
+    const printWindow = window.open("", "_blank");
+    if (printWindow) {
+      printWindow.document.write(htmlContent);
+      printWindow.document.close();
+      printWindow.focus();
+      printWindow.print();
     }
+  };
+
+  const runComplianceCheck = async (doc: string) => {
     setShowCompliance(true);
     setComplianceLoading(true);
     setComplianceRan(true);
@@ -157,7 +163,7 @@ ${markdownToBasicHTML(content)}
       const res = await fetch("/api/compliance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ document: content, glossaryData: glossaryData ?? null }),
+        body: JSON.stringify({ document: doc, glossaryData: glossaryData ?? null }),
       });
       if (!res.ok) throw new Error("Compliance check failed");
       const data = await res.json();
@@ -166,6 +172,50 @@ ${markdownToBasicHTML(content)}
       setComplianceIssues([]);
     } finally {
       setComplianceLoading(false);
+    }
+  };
+
+  // Auto-run compliance the first time the editor mounts (doc just generated)
+  useEffect(() => {
+    if (content) runComplianceCheck(content);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const handleComplianceCheck = () => {
+    if (showCompliance && complianceRan) {
+      setShowCompliance(false);
+    } else {
+      runComplianceCheck(content);
+    }
+  };
+
+  const handleApplyFix = async (issue: ComplianceIssue) => {
+    if (!issue.problematic_text) return;
+
+    if (issue.replacement) {
+      // Terminology preferred-term fix — plain string replace, no API call
+      const escaped = issue.problematic_text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      onChange(content.replace(new RegExp(`\\b${escaped}\\b`, "gi"), issue.replacement));
+      return;
+    }
+
+    // AI-assisted fix for voice / structure / style issues
+    try {
+      const res = await fetch("/api/refine", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          text: issue.problematic_text,
+          action: "fix-compliance",
+          instruction: issue.suggestion,
+          fullDocument: content,
+        }),
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      onChange(content.replace(issue.problematic_text, data.refined));
+    } catch {
+      // Fix silently fails; user can edit manually
     }
   };
 
@@ -275,6 +325,14 @@ ${markdownToBasicHTML(content)}
             .md
           </button>
           <button
+            onClick={exportPDF}
+            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
+                       hover:bg-surface-2 rounded-lg transition-colors border border-surface-3"
+          >
+            <FileText size={13} />
+            PDF
+          </button>
+          <button
             onClick={exportHTML}
             className="flex items-center gap-1 px-3 py-1.5 bg-brand-700 text-white text-xs
                        font-semibold rounded-lg hover:bg-brand-800 transition-colors shadow-sm"
@@ -335,6 +393,7 @@ ${markdownToBasicHTML(content)}
           issues={complianceIssues}
           isLoading={complianceLoading}
           onClose={() => setShowCompliance(false)}
+          onApplyFix={handleApplyFix}
         />
       )}
     </div>

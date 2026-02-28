@@ -20,7 +20,7 @@ const ACTIONS: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { text, action, fullDocument, config } = await req.json();
+    const { text, action, fullDocument, config, instruction: customInstruction } = await req.json();
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
@@ -29,7 +29,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    const instruction = ACTIONS[action] || ACTIONS.simplify;
+    // fix-compliance uses a caller-supplied instruction instead of a preset action
+    const instruction = action === "fix-compliance"
+      ? `Apply this MSTP compliance fix to the text: ${customInstruction}\n\nReturn only the corrected text, preserving all surrounding Markdown formatting.`
+      : (ACTIONS[action] || ACTIONS.simplify);
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",

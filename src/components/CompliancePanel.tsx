@@ -10,6 +10,8 @@ import {
   Loader2,
   ChevronDown,
   ChevronUp,
+  Wand2,
+  Check,
 } from "lucide-react";
 import type { ComplianceIssue } from "@/app/api/compliance/route";
 
@@ -52,13 +54,17 @@ export default function CompliancePanel({
   issues,
   isLoading,
   onClose,
+  onApplyFix,
 }: {
   issues: ComplianceIssue[];
   isLoading: boolean;
   onClose: () => void;
+  onApplyFix: (issue: ComplianceIssue) => Promise<void>;
 }) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
+  const [applying, setApplying] = useState<Set<string>>(new Set());
+  const [applied, setApplied] = useState<Set<string>>(new Set());
 
   const dismiss = (id: string) =>
     setDismissed((prev) => {
@@ -73,6 +79,15 @@ export default function CompliancePanel({
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
+
+  const handleFix = async (issue: ComplianceIssue) => {
+    setApplying((prev) => { const n = new Set(Array.from(prev)); n.add(issue.id); return n; });
+    await onApplyFix(issue);
+    setApplying((prev) => { const n = new Set(Array.from(prev)); n.delete(issue.id); return n; });
+    setApplied((prev) => { const n = new Set(Array.from(prev)); n.add(issue.id); return n; });
+    // Auto-dismiss after a brief "Applied ✓" flash
+    setTimeout(() => dismiss(issue.id), 1200);
+  };
 
   const visible = issues
     .filter((i) => !dismissed.has(i.id))
@@ -204,14 +219,38 @@ export default function CompliancePanel({
                       )}
                     </div>
 
-                    {/* Dismiss */}
-                    <button
-                      onClick={() => dismiss(issue.id)}
-                      className="shrink-0 p-1 rounded-md hover:bg-surface-2 text-ink-4 hover:text-ink-2 transition-colors mt-0.5"
-                      aria-label="Dismiss issue"
-                    >
-                      <X size={12} />
-                    </button>
+                    {/* Fix + Dismiss */}
+                    <div className="flex items-center gap-1 shrink-0 mt-0.5">
+                      {issue.problematic_text && (
+                        <button
+                          onClick={() => handleFix(issue)}
+                          disabled={applying.has(issue.id) || applied.has(issue.id)}
+                          className={`flex items-center gap-1 px-2 py-1 rounded-md text-[0.65rem] font-semibold
+                                      transition-colors disabled:cursor-default
+                                      ${applied.has(issue.id)
+                                        ? "bg-green-50 text-accent-green"
+                                        : "bg-brand-50 text-brand-700 hover:bg-brand-100"
+                                      }`}
+                          aria-label="Apply fix"
+                        >
+                          {applying.has(issue.id) ? (
+                            <Loader2 size={11} className="animate-spin" />
+                          ) : applied.has(issue.id) ? (
+                            <Check size={11} />
+                          ) : (
+                            <Wand2 size={11} />
+                          )}
+                          {applying.has(issue.id) ? "Fixing…" : applied.has(issue.id) ? "Applied" : "Fix"}
+                        </button>
+                      )}
+                      <button
+                        onClick={() => dismiss(issue.id)}
+                        className="p-1 rounded-md hover:bg-surface-2 text-ink-4 hover:text-ink-2 transition-colors"
+                        aria-label="Dismiss issue"
+                      >
+                        <X size={12} />
+                      </button>
+                    </div>
                   </div>
                 </div>
               );

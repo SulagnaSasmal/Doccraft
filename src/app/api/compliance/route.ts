@@ -12,6 +12,9 @@ export interface ComplianceIssue {
   rule: string;
   problematic_text?: string;
   suggestion: string;
+  /** Direct replacement string — present only for terminology preferred-term issues.
+   *  When set, apply without an AI call (plain string replace). */
+  replacement?: string;
 }
 
 export async function POST(req: NextRequest) {
@@ -43,6 +46,7 @@ export async function POST(req: NextRequest) {
       suggestion: t.suggestion
         ? `Replace "${t.term}" with "${t.suggestion}".`
         : `Remove or rephrase "${t.term}".`,
+      replacement: t.suggestion ?? undefined,
     }));
 
     // ── 2. AI-detected structural / voice / style issues ────────────────────
