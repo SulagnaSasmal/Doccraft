@@ -4,9 +4,11 @@ import { useState } from "react";
 import Header from "@/components/Header";
 import UploadPanel from "@/components/UploadPanel";
 import ConfigPanel from "@/components/ConfigPanel";
+import ContextPanel from "@/components/ContextPanel";
 import GapAnalysis from "@/components/GapAnalysis";
 import DocumentEditor from "@/components/DocumentEditor";
 import StatusBar from "@/components/StatusBar";
+import type { GlossaryData } from "@/lib/validateTerminology";
 
 export type AppStage = "upload" | "analyzing" | "questions" | "generating" | "editing";
 
@@ -35,6 +37,8 @@ export default function Home() {
     tone: "conversational",
     customInstructions: "",
   });
+  const [contextText, setContextText] = useState("");
+  const [glossaryData, setGlossaryData] = useState<GlossaryData | null>(null);
   const [questions, setQuestions] = useState<GapQuestion[]>([]);
   const [generatedDoc, setGeneratedDoc] = useState("");
   const [error, setError] = useState("");
@@ -43,6 +47,11 @@ export default function Home() {
     setUploadedContent(content);
     setFileNames(names);
     setError("");
+  };
+
+  const handleContextChange = (text: string, glossary: GlossaryData | null) => {
+    setContextText(text);
+    setGlossaryData(glossary);
   };
 
   const handleAnalyze = async () => {
@@ -61,6 +70,7 @@ export default function Home() {
           action: "analyze",
           content: uploadedContent,
           config,
+          contextText,
         }),
       });
 
@@ -91,6 +101,7 @@ export default function Home() {
           content: uploadedContent,
           config,
           answers: answeredQuestions,
+          contextText,
         }),
       });
 
@@ -132,6 +143,8 @@ export default function Home() {
     setStage("upload");
     setUploadedContent("");
     setFileNames([]);
+    setContextText("");
+    setGlossaryData(null);
     setQuestions([]);
     setGeneratedDoc("");
     setError("");
@@ -159,6 +172,11 @@ export default function Home() {
             </div>
             <div className="space-y-5">
               <ConfigPanel config={config} onChange={setConfig} />
+              <ContextPanel
+                onContextChange={handleContextChange}
+                contextText={contextText}
+                glossaryData={glossaryData}
+              />
               <button
                 onClick={handleAnalyze}
                 disabled={!uploadedContent.trim() || stage === "analyzing"}
