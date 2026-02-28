@@ -80,17 +80,37 @@ f5e890f Add terminology validator and ContextPanel component
 
 ---
 
-## Phase 2 — Active (next)
+## Phase 2 — COMPLETE ✅
 
-### Features
+### What was shipped
 
-| Feature | Effort | Value | Priority |
-|---|---|---|---|
-| **Document history** | Low | High | 1st — localStorage, last 10 sessions |
-| **GitHub URL input** | Medium | High | 2nd — fetch public repo README/docs/OpenAPI as context |
-| **Mermaid diagram generation** | Medium | High | 3rd — auto-generate flow/sequence diagrams from content analysis |
-| **Format recommendation engine** | Medium | Medium | 4th — AI suggests doc type before user selects |
-| **DOCX export** | High | Medium | 5th — `docx` npm package, save for last |
+| Feature | Status |
+|---|---|
+| **Document history** | ✅ localStorage, last 10 sessions, collapsible Recent panel, restore/delete |
+| **GitHub URL input** | ✅ Third tab in Context panel — fetches public repo READMEs, files, folders via GitHub API |
+| **Mermaid diagram generation** | ✅ GPT-4o generates flowchart/sequence/state; renders live; copy or insert into doc |
+| **Format recommendation engine** | ✅ GPT-4o-mini analyses uploaded content (debounced 1.5s), callout with one-click accept |
+| **DOCX export** | ✅ Dynamic `docx` import — headings, paragraphs, lists, bold, code → Word .docx |
+
+### Files created / modified
+
+| File | Status |
+|---|---|
+| `src/lib/useDocHistory.ts` | Created — localStorage history hook |
+| `src/components/HistoryPanel.tsx` | Created — collapsible recent sessions panel |
+| `src/app/api/github/route.ts` | Created — GitHub URL fetcher (supports GITHUB_TOKEN) |
+| `src/app/api/diagram/route.ts` | Created — Mermaid diagram generation via GPT-4o |
+| `src/app/api/recommend/route.ts` | Created — format recommendation via GPT-4o-mini |
+| `src/components/DiagramPanel.tsx` | Created — Mermaid renderer with copy/insert |
+| `src/app/page.tsx` | Modified — history, recommendation callout, restore session |
+| `src/components/ContextPanel.tsx` | Modified — GitHub URL tab added |
+| `src/components/DocumentEditor.tsx` | Modified — Diagram button, DOCX export |
+
+### Git commit (Phase 2)
+
+```
+614dd6b feat: Phase 2 — document history, GitHub URL, Mermaid diagrams, format recommendation, DOCX export
+```
 
 ### Document history detail
 

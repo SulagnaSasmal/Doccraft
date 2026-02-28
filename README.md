@@ -12,6 +12,7 @@ Transform raw content into polished, structured documentation using AI. Feed it 
 ### Input & Context
 - **Multi-format input** — Upload text files, paste content, drag-and-drop images
 - **Context Layer** — Upload previous docs, style guides, glossaries, or OpenAPI specs to make the AI write consistently with your existing content
+- **GitHub URL input** — Paste any public GitHub repo, file, or folder URL — content fetched and added to context automatically
 - **Structured glossary** — Upload a `.json` glossary with `forbidden_terms`, `preferred_terms`, and `approved_terms` to enforce your terminology automatically
 
 ### Generation
@@ -19,10 +20,12 @@ Transform raw content into polished, structured documentation using AI. Feed it 
 - **Interactive Q&A loop** — Answer questions to improve output quality, skip what you don't know
 - **5 document templates** — User Guide, Quick Start, API Reference, Troubleshooting, Release Notes
 - **Audience-aware** — Adjusts language for technical, non-technical, or mixed audiences
+- **Format recommendation** — AI analyses your uploaded content and suggests the best doc type before you configure
 
 ### Editing
 - **Inline AI editing** — Select any text → Simplify, Expand, Add Example, Make Concise, Troubleshoot
 - **Live split editor** — Edit Markdown on the left, see a styled preview on the right (Edit / Split / Preview modes)
+- **Mermaid diagram generator** — Generate a flowchart, sequence diagram, or state diagram from your document with one click; insert directly into the doc
 
 ### MSTP Compliance (auto-runs after generation)
 - **Automatic compliance check** — Runs the moment your document is generated, no button press needed
@@ -35,7 +38,11 @@ Transform raw content into polished, structured documentation using AI. Feed it 
 - **HTML export** — Styled, standalone HTML file ready to publish
 - **Markdown export** — Clean `.md` file for your repo
 - **PDF export** — Browser print dialog with print-ready formatting
+- **DOCX export** — Download as a Word `.docx` file with headings, lists, and formatting preserved
 - **Copy to clipboard** — One click
+
+### History
+- **Document history** — Last 10 sessions saved to localStorage automatically; restore any previous document with one click
 
 ---
 
@@ -164,12 +171,12 @@ Vercel auto-deploys on every push to `main`.
 - [x] Terminology validator (synchronous, client-side, glossary JSON)
 - [x] PDF export
 
-### Phase 2 — Coming
-- [ ] Document history (localStorage — restore last 10 sessions)
-- [ ] GitHub URL input (fetch public repo README/docs as context)
-- [ ] Mermaid diagram generation (auto-generate flow/sequence diagrams)
-- [ ] Format recommendation engine (AI suggests doc type)
-- [ ] DOCX export
+### Phase 2 — Complete ✅
+- [x] Document history — collapsible Recent panel, restore last 10 sessions from localStorage
+- [x] GitHub URL input — paste any public GitHub repo/file/folder URL → fetched as context automatically
+- [x] Mermaid diagram generation — GPT-4o generates flowchart, sequence, or state diagrams; rendered live; insert into doc with one click
+- [x] Format recommendation engine — AI analyses your uploaded content and suggests the best doc type (with one-click accept)
+- [x] DOCX export — download your document as a Word `.docx` file
 
 ### Phase 3 — Future
 - [ ] User accounts + cloud storage (Supabase)
