@@ -61,11 +61,15 @@ export default function CompliancePanel({
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
   const dismiss = (id: string) =>
-    setDismissed((prev) => new Set([...prev, id]));
+    setDismissed((prev) => {
+      const next = new Set(Array.from(prev));
+      next.add(id);
+      return next;
+    });
 
   const toggleExpand = (id: string) =>
     setExpanded((prev) => {
-      const next = new Set(prev);
+      const next = new Set(Array.from(prev));
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
