@@ -106,6 +106,7 @@ export default function DocumentEditor({
   p { margin-bottom: 1rem; }
   ul, ol { margin-bottom: 1rem; padding-left: 1.5rem; }
   li { margin-bottom: 0.375rem; }
+  li.nested { margin-left: 1.5rem; list-style-type: circle; }
   code { background: #f1f3f9; padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85em; }
   pre { background: #0f1729; color: #dbe4ff; padding: 1rem 1.25rem; border-radius: 8px;
         margin-bottom: 1rem; overflow-x: auto; }
@@ -127,7 +128,7 @@ ${markdownToBasicHTML(content)}
 </body>
 </html>`;
 
-  const exportHTML = () => downloadTextFile(buildHTMLExport(), "documentation.html", "text/html");
+  const exportHTML = () => downloadTextFile(buildHTMLExport(), "documentation.html", "text/html;charset=utf-8");
   const exportMarkdown = () => downloadTextFile(content, "documentation.md", "text/markdown");
 
   const downloadTextFile = (data: string, filename: string, type: string) => {
@@ -478,24 +479,96 @@ ${markdownToBasicHTML(content)}
   );
 }
 
-/** Minimal markdown → HTML conversion for export */
+/** Markdown → HTML for export. Handles nested lists, code fences, emoji. */
 function markdownToBasicHTML(md: string): string {
-  return md
-    .replace(/^### (.+)$/gm, "<h3>$1</h3>")
-    .replace(/^## (.+)$/gm, "<h2>$1</h2>")
-    .replace(/^# (.+)$/gm, "<h1>$1</h1>")
-    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
-    .replace(/\*(.+?)\*/g, "<em>$1</em>")
-    .replace(/`(.+?)`/g, "<code>$1</code>")
-    .replace(/^> (.+)$/gm, "<blockquote><p>$1</p></blockquote>")
-    .replace(/^- (.+)$/gm, "<li>$1</li>")
-    .replace(/^(\d+)\. (.+)$/gm, "<li>$2</li>")
-    .replace(/(<li>.*<\/li>\n?)+/g, (match) =>
-      match.startsWith("<li>") ? `<ul>${match}</ul>` : match
-    )
-    .replace(/\n\n/g, "</p><p>")
-    .replace(/^(?!<[hublop])(.+)$/gm, "<p>$1</p>")
-    .replace(/<p><\/p>/g, "");
+  const src = stripOuterFence(md);
+
+  const escape = (s: string) =>
+    s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+  const inline = (s: string) =>
+    s
+      .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+      .replace(/\*(.+?)\*/g, "<em>$1</em>")
+      .replace(/`(.+?)`/g, "<code>$1</code>");
+
+  const lines = src.split(/\r?\n/);
+  const out: string[] = [];
+  let inCode = false;
+  let codeLines: string[] = [];
+  let inUL = false;
+  let inOL = false;
+
+  const closeLists = () => {
+    if (inUL) { out.push("</ul>"); inUL = false; }
+    if (inOL) { out.push("</ol>"); inOL = false; }
+  };
+
+  for (const line of lines) {
+    // Code fence toggle
+    if (/^```/.test(line)) {
+      if (inCode) {
+        out.push(`<pre><code>${escape(codeLines.join("\n"))}</code></pre>`);
+        codeLines = [];
+        inCode = false;
+      } else {
+        closeLists();
+        inCode = true;
+      }
+      continue;
+    }
+    if (inCode) { codeLines.push(line); continue; }
+
+    // Headings
+    const hm = line.match(/^(#{1,3}) (.*)/);
+    if (hm) {
+      closeLists();
+      out.push(`<h${hm[1].length}>${inline(hm[2])}</h${hm[1].length}>`);
+      continue;
+    }
+
+    // Blockquote
+    if (/^> /.test(line)) {
+      closeLists();
+      out.push(`<blockquote><p>${inline(line.slice(2))}</p></blockquote>`);
+      continue;
+    }
+
+    // Nested bullet (2+ leading spaces)
+    const nb = line.match(/^ {2,}[-*] (.*)/);
+    if (nb) {
+      if (!inUL) { out.push("<ul>"); inUL = true; }
+      out.push(`<li class="nested">${inline(nb[1])}</li>`);
+      continue;
+    }
+
+    // Top-level bullet
+    const b = line.match(/^[-*] (.*)/);
+    if (b) {
+      if (inOL) { out.push("</ol>"); inOL = false; }
+      if (!inUL) { out.push("<ul>"); inUL = true; }
+      out.push(`<li>${inline(b[1])}</li>`);
+      continue;
+    }
+
+    // Ordered list
+    const ol = line.match(/^\d+\. (.*)/);
+    if (ol) {
+      if (inUL) { out.push("</ul>"); inUL = false; }
+      if (!inOL) { out.push("<ol>"); inOL = true; }
+      out.push(`<li>${inline(ol[1])}</li>`);
+      continue;
+    }
+
+    // Empty line
+    if (!line.trim()) { closeLists(); continue; }
+
+    // Paragraph
+    closeLists();
+    out.push(`<p>${inline(line)}</p>`);
+  }
+
+  closeLists();
+  return out.join("\n");
 }
 
 /** Convert markdown to docx Paragraph array */
@@ -503,7 +576,7 @@ function markdownToDocxParagraphs(
   md: string,
   { Paragraph, TextRun, HeadingLevel }: any
 ): any[] {
-  const lines = md.split("\n");
+  const lines = stripOuterFence(md).split("\n");
   const paragraphs: any[] = [];
   let inCodeBlock = false;
   const codeLines: string[] = [];
@@ -585,6 +658,13 @@ function markdownToDocxParagraphs(
   }
 
   return paragraphs;
+}
+
+/** Strip a wrapping ```lang ... ``` fence if the AI added one around its output */
+function stripOuterFence(md: string): string {
+  const s = md.trim();
+  const m = s.match(/^```[\w]*\r?\n([\s\S]+)\r?\n```$/);
+  return m ? m[1].trim() : s;
 }
 
 function parseInlineRuns(text: string, { TextRun }: any): any[] {
