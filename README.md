@@ -18,8 +18,8 @@ Transform raw content into polished, structured documentation using AI. Feed it 
 ### 1. Clone and install
 
 ```bash
-git clone https://github.com/SulagnaSasmal/documentation-ai-agent.git
-cd documentation-ai-agent
+git clone https://github.com/SulagnaSasmal/Doccraft.git
+cd Doccraft
 npm install
 ```
 
