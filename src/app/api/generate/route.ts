@@ -63,7 +63,7 @@ const TONE_INSTRUCTIONS: Record<string, string> = {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, content, config, answers } = body;
+    const { action, content, config, answers, contextText } = body;
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
@@ -73,9 +73,9 @@ export async function POST(req: NextRequest) {
     }
 
     if (action === "analyze") {
-      return handleAnalyze(content, config);
+      return handleAnalyze(content, config, contextText);
     } else if (action === "generate") {
-      return handleGenerate(content, config, answers);
+      return handleGenerate(content, config, answers, contextText);
     }
 
     return NextResponse.json({ error: "Invalid action" }, { status: 400 });
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function handleAnalyze(content: string, config: any) {
+async function handleAnalyze(content: string, config: any, contextText?: string) {
   const template = TEMPLATES[config.docType] || TEMPLATES["user-guide"];
   const audienceNote = AUDIENCE_INSTRUCTIONS[config.audience] || "";
 
@@ -120,7 +120,12 @@ IMPORTANT: Return ONLY the JSON array, no markdown fences, no explanation. Examp
     model: "gpt-4o",
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: `Here is the raw source material:\n\n${content.slice(0, 12000)}` },
+      {
+        role: "user",
+        content: contextText?.trim()
+          ? `CONTEXT DOCUMENTS (existing docs, style guide, terminology — identify gaps relative to these):\n${contextText.slice(0, 6000)}\n\n---\n\nSOURCE MATERIAL TO DOCUMENT:\n${content.slice(0, 12000)}`
+          : `Here is the raw source material:\n\n${content.slice(0, 12000)}`,
+      },
     ],
     max_tokens: 2000,
     temperature: 0.3,
@@ -151,7 +156,7 @@ IMPORTANT: Return ONLY the JSON array, no markdown fences, no explanation. Examp
   return NextResponse.json({ questions: formatted });
 }
 
-async function handleGenerate(content: string, config: any, answers: any[]) {
+async function handleGenerate(content: string, config: any, answers: any[], contextText?: string) {
   const template = TEMPLATES[config.docType] || TEMPLATES["user-guide"];
   const audienceNote = AUDIENCE_INSTRUCTIONS[config.audience] || "";
   const toneNote = TONE_INSTRUCTIONS[config.tone] || "";
@@ -191,13 +196,17 @@ RULES:
 
 ${config.customInstructions ? `ADDITIONAL INSTRUCTIONS: ${config.customInstructions}` : ""}`;
 
-  const userMessage = `SOURCE MATERIAL:
-${content.slice(0, 12000)}
-
-${answeredContext ? `\nCLARIFICATIONS FROM SME:\n${answeredContext}` : ""}
-${skippedContext ? `\nUNANSWERED QUESTIONS (make reasonable assumptions):\n${skippedContext}` : ""}
-
-Please generate the complete documentation now.`;
+  const userMessage = [
+    contextText?.trim()
+      ? `CONTEXT DOCUMENTS (existing docs, style guide, terminology — write consistently with these):\n${contextText.slice(0, 6000)}\n\n---`
+      : null,
+    `SOURCE MATERIAL:\n${content.slice(0, 12000)}`,
+    answeredContext ? `\nCLARIFICATIONS FROM SME:\n${answeredContext}` : null,
+    skippedContext ? `\nUNANSWERED QUESTIONS (make reasonable assumptions):\n${skippedContext}` : null,
+    "\nPlease generate the complete documentation now.",
+  ]
+    .filter(Boolean)
+    .join("\n\n");
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
