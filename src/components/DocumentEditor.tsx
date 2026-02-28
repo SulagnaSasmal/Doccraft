@@ -15,11 +15,14 @@ import {
   Check,
   Loader2,
   ShieldCheck,
+  GitGraph,
+  FileDown,
 } from "lucide-react";
 import type { DocConfig } from "@/app/page";
 import type { GlossaryData } from "@/lib/validateTerminology";
 import type { ComplianceIssue } from "@/app/api/compliance/route";
 import CompliancePanel from "@/components/CompliancePanel";
+import DiagramPanel from "@/components/DiagramPanel";
 
 const AI_ACTIONS = [
   { key: "simplify", label: "Simplify", icon: Minimize2, desc: "Simpler language" },
@@ -49,6 +52,8 @@ export default function DocumentEditor({
   const [complianceLoading, setComplianceLoading] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
   const [complianceRan, setComplianceRan] = useState(false);
+  const [showDiagram, setShowDiagram] = useState(false);
+  const [docxExporting, setDocxExporting] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const getSelectedText = (): { text: string; start: number; end: number } | null => {
@@ -122,14 +127,15 @@ ${markdownToBasicHTML(content)}
 </body>
 </html>`;
 
-  const exportHTML = () => downloadFile(buildHTMLExport(), "documentation.html", "text/html");
+  const exportHTML = () => downloadTextFile(buildHTMLExport(), "documentation.html", "text/html");
+  const exportMarkdown = () => downloadTextFile(content, "documentation.md", "text/markdown");
 
-  const exportMarkdown = () => {
-    downloadFile(content, "documentation.md", "text/markdown");
+  const downloadTextFile = (data: string, filename: string, type: string) => {
+    const blob = new Blob([data], { type });
+    downloadBlob(blob, filename);
   };
 
-  const downloadFile = (content: string, filename: string, type: string) => {
-    const blob = new Blob([content], { type });
+  const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
@@ -155,6 +161,40 @@ ${markdownToBasicHTML(content)}
     }
   };
 
+  // ─── DOCX export ──────────────────────────────────────────────────────────
+
+  const exportDOCX = async () => {
+    setDocxExporting(true);
+    try {
+      const {
+        Document,
+        Packer,
+        Paragraph,
+        TextRun,
+        HeadingLevel,
+      } = await import("docx");
+
+      const paragraphs = markdownToDocxParagraphs(content, {
+        Paragraph,
+        TextRun,
+        HeadingLevel,
+      });
+
+      const doc = new Document({
+        sections: [{ children: paragraphs }],
+      });
+
+      const blob = await Packer.toBlob(doc);
+      downloadBlob(blob, "documentation.docx");
+    } catch (err) {
+      console.error("DOCX export error:", err);
+    } finally {
+      setDocxExporting(false);
+    }
+  };
+
+  // ─── Compliance ───────────────────────────────────────────────────────────
+
   const runComplianceCheck = async (doc: string) => {
     setShowCompliance(true);
     setComplianceLoading(true);
@@ -175,7 +215,6 @@ ${markdownToBasicHTML(content)}
     }
   };
 
-  // Auto-run compliance the first time the editor mounts (doc just generated)
   useEffect(() => {
     if (content) runComplianceCheck(content);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -193,13 +232,11 @@ ${markdownToBasicHTML(content)}
     if (!issue.problematic_text) return;
 
     if (issue.replacement) {
-      // Terminology preferred-term fix — plain string replace, no API call
       const escaped = issue.problematic_text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       onChange(content.replace(new RegExp(`\\b${escaped}\\b`, "gi"), issue.replacement));
       return;
     }
 
-    // AI-assisted fix for voice / structure / style issues
     try {
       const res = await fetch("/api/refine", {
         method: "POST",
@@ -219,7 +256,6 @@ ${markdownToBasicHTML(content)}
     }
   };
 
-  // Derive badge for MSTP button after a check has run
   const errorCount = complianceIssues.filter((i) => i.severity === "error").length;
   const issueCount = complianceIssues.length;
   const badgeColor =
@@ -281,65 +317,98 @@ ${markdownToBasicHTML(content)}
           </div>
         </div>
 
-        {/* MSTP Check button */}
-        <button
-          onClick={handleComplianceCheck}
-          disabled={complianceLoading}
-          className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg
-                      transition-colors disabled:opacity-40 border
-                      ${showCompliance && complianceRan
-                        ? "bg-brand-50 text-brand-700 border-brand-200"
-                        : "text-ink-2 hover:bg-surface-2 border-surface-3"
-                      }`}
-        >
-          {complianceLoading
-            ? <Loader2 size={13} className="animate-spin" />
-            : <ShieldCheck size={13} />
-          }
-          MSTP Check
-          {complianceRan && badgeColor && (
-            <span className={`absolute -top-1.5 -right-1.5 min-w-[1.1rem] h-[1.1rem] px-1
-                             rounded-full text-[0.6rem] font-bold flex items-center justify-center
-                             ${badgeColor}`}>
-              {issueCount > 0 ? issueCount : "✓"}
-            </span>
-          )}
-        </button>
+        {/* Right-side controls */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* Diagram button */}
+          <button
+            onClick={() => setShowDiagram((s) => !s)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg
+                        transition-colors border
+                        ${showDiagram
+                          ? "bg-brand-50 text-brand-700 border-brand-200"
+                          : "text-ink-2 hover:bg-surface-2 border-surface-3"
+                        }`}
+            title="Generate a Mermaid diagram from your document"
+          >
+            <GitGraph size={13} />
+            Diagram
+          </button>
 
-        {/* Export buttons */}
-        <div className="flex items-center gap-1.5">
+          {/* MSTP Check button */}
           <button
-            onClick={copyToClipboard}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
-                       hover:bg-surface-2 rounded-lg transition-colors"
+            onClick={handleComplianceCheck}
+            disabled={complianceLoading}
+            className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg
+                        transition-colors disabled:opacity-40 border
+                        ${showCompliance && complianceRan
+                          ? "bg-brand-50 text-brand-700 border-brand-200"
+                          : "text-ink-2 hover:bg-surface-2 border-surface-3"
+                        }`}
           >
-            {copied ? <Check size={13} className="text-accent-green" /> : <Copy size={13} />}
-            {copied ? "Copied" : "Copy"}
+            {complianceLoading
+              ? <Loader2 size={13} className="animate-spin" />
+              : <ShieldCheck size={13} />
+            }
+            MSTP Check
+            {complianceRan && badgeColor && (
+              <span className={`absolute -top-1.5 -right-1.5 min-w-[1.1rem] h-[1.1rem] px-1
+                               rounded-full text-[0.6rem] font-bold flex items-center justify-center
+                               ${badgeColor}`}>
+                {issueCount > 0 ? issueCount : "✓"}
+              </span>
+            )}
           </button>
-          <button
-            onClick={exportMarkdown}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
-                       hover:bg-surface-2 rounded-lg transition-colors"
-          >
-            <Code2 size={13} />
-            .md
-          </button>
-          <button
-            onClick={exportPDF}
-            className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
-                       hover:bg-surface-2 rounded-lg transition-colors border border-surface-3"
-          >
-            <FileText size={13} />
-            PDF
-          </button>
-          <button
-            onClick={exportHTML}
-            className="flex items-center gap-1 px-3 py-1.5 bg-brand-700 text-white text-xs
-                       font-semibold rounded-lg hover:bg-brand-800 transition-colors shadow-sm"
-          >
-            <Download size={13} />
-            Export HTML
-          </button>
+
+          {/* Export buttons */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={copyToClipboard}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
+                         hover:bg-surface-2 rounded-lg transition-colors"
+            >
+              {copied ? <Check size={13} className="text-accent-green" /> : <Copy size={13} />}
+              {copied ? "Copied" : "Copy"}
+            </button>
+            <button
+              onClick={exportMarkdown}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
+                         hover:bg-surface-2 rounded-lg transition-colors"
+            >
+              <Code2 size={13} />
+              .md
+            </button>
+            <button
+              onClick={exportPDF}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
+                         hover:bg-surface-2 rounded-lg transition-colors border border-surface-3"
+            >
+              <FileText size={13} />
+              PDF
+            </button>
+            <button
+              onClick={exportDOCX}
+              disabled={docxExporting}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
+                         hover:bg-surface-2 rounded-lg transition-colors border border-surface-3
+                         disabled:opacity-40"
+              title="Export as Word document"
+            >
+              {docxExporting ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : (
+                <FileDown size={13} />
+              )}
+              .docx
+            </button>
+            <button
+              onClick={exportHTML}
+              className="flex items-center gap-1 px-3 py-1.5 bg-brand-700 text-white text-xs
+                         font-semibold rounded-lg hover:bg-brand-800 transition-colors shadow-sm"
+            >
+              <Download size={13} />
+              Export HTML
+            </button>
+          </div>
         </div>
       </div>
 
@@ -387,6 +456,15 @@ ${markdownToBasicHTML(content)}
         💡 Select text in the editor, then click an AI action to refine just that section
       </p>
 
+      {/* Diagram panel */}
+      {showDiagram && (
+        <DiagramPanel
+          document={content}
+          onInsert={(block) => onChange(content + block)}
+          onClose={() => setShowDiagram(false)}
+        />
+      )}
+
       {/* Compliance panel */}
       {showCompliance && (
         <CompliancePanel
@@ -400,7 +478,7 @@ ${markdownToBasicHTML(content)}
   );
 }
 
-/** Minimal markdown → HTML conversion for export (not for live preview) */
+/** Minimal markdown → HTML conversion for export */
 function markdownToBasicHTML(md: string): string {
   return md
     .replace(/^### (.+)$/gm, "<h3>$1</h3>")
@@ -418,4 +496,108 @@ function markdownToBasicHTML(md: string): string {
     .replace(/\n\n/g, "</p><p>")
     .replace(/^(?!<[hublop])(.+)$/gm, "<p>$1</p>")
     .replace(/<p><\/p>/g, "");
+}
+
+/** Convert markdown to docx Paragraph array */
+function markdownToDocxParagraphs(
+  md: string,
+  { Paragraph, TextRun, HeadingLevel }: any
+): any[] {
+  const lines = md.split("\n");
+  const paragraphs: any[] = [];
+  let inCodeBlock = false;
+  const codeLines: string[] = [];
+
+  for (const line of lines) {
+    if (line.startsWith("```")) {
+      if (inCodeBlock) {
+        paragraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: codeLines.join("\n"),
+                font: "Courier New",
+                size: 18,
+              }),
+            ],
+            spacing: { before: 120, after: 120 },
+          })
+        );
+        codeLines.length = 0;
+        inCodeBlock = false;
+      } else {
+        inCodeBlock = true;
+      }
+      continue;
+    }
+
+    if (inCodeBlock) {
+      codeLines.push(line);
+      continue;
+    }
+
+    if (line.startsWith("# ")) {
+      paragraphs.push(
+        new Paragraph({ text: line.slice(2), heading: HeadingLevel.HEADING_1 })
+      );
+    } else if (line.startsWith("## ")) {
+      paragraphs.push(
+        new Paragraph({ text: line.slice(3), heading: HeadingLevel.HEADING_2 })
+      );
+    } else if (line.startsWith("### ")) {
+      paragraphs.push(
+        new Paragraph({ text: line.slice(4), heading: HeadingLevel.HEADING_3 })
+      );
+    } else if (line.startsWith("- ") || line.startsWith("* ")) {
+      paragraphs.push(
+        new Paragraph({
+          children: parseInlineRuns(line.slice(2), { TextRun }),
+          indent: { left: 720 },
+          spacing: { before: 60, after: 60 },
+        })
+      );
+    } else if (/^\d+\. /.test(line)) {
+      paragraphs.push(
+        new Paragraph({
+          children: parseInlineRuns(line.replace(/^\d+\. /, ""), { TextRun }),
+          indent: { left: 720 },
+          spacing: { before: 60, after: 60 },
+        })
+      );
+    } else if (line.startsWith("> ")) {
+      paragraphs.push(
+        new Paragraph({
+          children: [new TextRun({ text: line.slice(2), italics: true })],
+          indent: { left: 720 },
+          spacing: { before: 120, after: 120 },
+        })
+      );
+    } else if (line.trim() === "") {
+      paragraphs.push(new Paragraph({ spacing: { before: 60, after: 60 } }));
+    } else {
+      paragraphs.push(
+        new Paragraph({
+          children: parseInlineRuns(line, { TextRun }),
+          spacing: { before: 100, after: 100 },
+        })
+      );
+    }
+  }
+
+  return paragraphs;
+}
+
+function parseInlineRuns(text: string, { TextRun }: any): any[] {
+  const runs: any[] = [];
+  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
+  for (const part of parts) {
+    if (part.startsWith("**") && part.endsWith("**")) {
+      runs.push(new TextRun({ text: part.slice(2, -2), bold: true }));
+    } else if (part.startsWith("`") && part.endsWith("`")) {
+      runs.push(new TextRun({ text: part.slice(1, -1), font: "Courier New", size: 18 }));
+    } else if (part) {
+      runs.push(new TextRun({ text: part }));
+    }
+  }
+  return runs.length > 0 ? runs : [new TextRun({ text: "" })];
 }

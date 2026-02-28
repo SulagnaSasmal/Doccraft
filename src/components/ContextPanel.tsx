@@ -10,8 +10,13 @@ import {
   X,
   ChevronDown,
   CheckCircle2,
+  Github,
+  Loader2,
+  Link,
 } from "lucide-react";
 import type { GlossaryData } from "@/lib/validateTerminology";
+
+type TabMode = "upload" | "paste" | "github";
 
 interface LoadedFile {
   name: string;
@@ -29,15 +34,17 @@ export default function ContextPanel({
   glossaryData: GlossaryData | null;
 }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [pasteMode, setPasteMode] = useState(false);
+  const [tab, setTab] = useState<TabMode>("upload");
   const [pasteText, setPasteText] = useState("");
   const [isDragging, setIsDragging] = useState(false);
   const [loadedFiles, setLoadedFiles] = useState<LoadedFile[]>([]);
+  const [githubUrl, setGithubUrl] = useState("");
+  const [githubLoading, setGithubLoading] = useState(false);
+  const [githubError, setGithubError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // ─── Helpers ──────────────────────────────────────────────────────────────
 
-  /** Try to parse a JSON file as a GlossaryData object. */
   function tryParseGlossary(text: string): GlossaryData | null {
     try {
       const parsed = JSON.parse(text);
@@ -55,7 +62,6 @@ export default function ContextPanel({
     return null;
   }
 
-  /** Rebuild the combined context string and glossary from the current file list + new additions. */
   function applyChanges(
     newContextText: string,
     newGlossary: GlossaryData | null,
@@ -74,7 +80,6 @@ export default function ContextPanel({
     const newFiles: LoadedFile[] = [...loadedFiles];
 
     for (const file of Array.from(files)) {
-      // Skip duplicates
       if (newFiles.find((f) => f.name === file.name)) continue;
 
       let text = "";
@@ -94,17 +99,15 @@ export default function ContextPanel({
         text = await file.text();
         const parsed = tryParseGlossary(text);
         if (parsed) {
-          // Treat as glossary — don't add raw JSON to the context text
           detectedGlossary = parsed;
           isGlossary = true;
-          text = ""; // glossary data is passed separately, not as context text
+          text = "";
         }
       } else {
-        // Try reading as plain text (handles .yaml, .rst, etc.)
         try {
           text = await file.text();
         } catch {
-          continue; // Binary file — skip
+          continue;
         }
       }
 
@@ -120,7 +123,7 @@ export default function ContextPanel({
     applyChanges(combinedText, detectedGlossary, newFiles);
   }
 
-  // ─── Drag & drop handlers ─────────────────────────────────────────────────
+  // ─── Drag & drop ──────────────────────────────────────────────────────────
 
   function handleDrag(e: DragEvent, entering: boolean) {
     e.preventDefault();
@@ -135,7 +138,7 @@ export default function ContextPanel({
     if (e.dataTransfer.files.length) processFiles(e.dataTransfer.files);
   }
 
-  // ─── Paste handler ────────────────────────────────────────────────────────
+  // ─── Paste ────────────────────────────────────────────────────────────────
 
   function handlePasteSubmit() {
     if (!pasteText.trim()) return;
@@ -151,15 +154,52 @@ export default function ContextPanel({
     setPasteText("");
   }
 
+  // ─── GitHub URL fetch ─────────────────────────────────────────────────────
+
+  async function handleGitHubFetch() {
+    if (!githubUrl.trim()) return;
+    setGithubLoading(true);
+    setGithubError("");
+
+    try {
+      const res = await fetch("/api/github", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ url: githubUrl.trim() }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Fetch failed");
+
+      const combined = contextText
+        ? `${contextText}\n\n---\n\n${data.content}`
+        : data.content;
+
+      const newFile: LoadedFile = {
+        name: data.label,
+        chars: data.chars,
+        isGlossary: false,
+      };
+
+      applyChanges(combined, glossaryData, [...loadedFiles, newFile]);
+      setGithubUrl("");
+    } catch (err: any) {
+      setGithubError(err.message || "Failed to fetch from GitHub");
+    } finally {
+      setGithubLoading(false);
+    }
+  }
+
   // ─── Clear ────────────────────────────────────────────────────────────────
 
   function handleClear() {
     setLoadedFiles([]);
     setPasteText("");
+    setGithubUrl("");
+    setGithubError("");
     onContextChange("", null);
   }
 
-  // ─── Derived display values ───────────────────────────────────────────────
+  // ─── Derived ──────────────────────────────────────────────────────────────
 
   const hasContext = contextText.length > 0 || glossaryData !== null;
   const glossaryFile = loadedFiles.find((f) => f.isGlossary);
@@ -178,9 +218,14 @@ export default function ContextPanel({
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
+  const TAB_CLASSES = (active: boolean) =>
+    `px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
+      active ? "bg-brand-100 text-brand-700" : "text-ink-3 hover:bg-surface-2"
+    }`;
+
   return (
     <div className="bg-white rounded-2xl shadow-card border border-surface-3 overflow-hidden">
-      {/* Header — always visible, click to collapse/expand */}
+      {/* Header */}
       <div
         className="px-5 py-4 flex items-center justify-between cursor-pointer select-none hover:bg-surface-1 transition-colors"
         onClick={() => setIsOpen((o) => !o)}
@@ -202,7 +247,6 @@ export default function ContextPanel({
             </p>
           </div>
         </div>
-
         <ChevronDown
           size={16}
           className={`text-ink-3 transition-transform duration-200 shrink-0 ${
@@ -211,47 +255,45 @@ export default function ContextPanel({
         />
       </div>
 
-      {/* Expandable body */}
+      {/* Body */}
       {isOpen && (
         <div className="border-t border-surface-2 p-5">
-          {/* Explanation */}
           <p className="text-xs text-ink-3 leading-relaxed mb-4">
             Upload previous docs, your style guide, or a product glossary. The AI
             writes consistently with your existing content and terminology.
             <br />
             <span className="text-ink-4">
-              Accepted: .txt, .md, .json (glossary), .yaml, .csv
+              Accepted: .txt, .md, .json (glossary), .yaml, .csv · or paste a GitHub URL
             </span>
           </p>
 
           {/* Tab switcher */}
           <div className="flex gap-1.5 mb-4">
             <button
-              onClick={(e) => { e.stopPropagation(); setPasteMode(false); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                !pasteMode
-                  ? "bg-brand-100 text-brand-700"
-                  : "text-ink-3 hover:bg-surface-2"
-              }`}
+              onClick={(e) => { e.stopPropagation(); setTab("upload"); }}
+              className={TAB_CLASSES(tab === "upload")}
             >
               <Upload size={13} className="inline mr-1 -mt-0.5" />
               Upload
             </button>
             <button
-              onClick={(e) => { e.stopPropagation(); setPasteMode(true); }}
-              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${
-                pasteMode
-                  ? "bg-brand-100 text-brand-700"
-                  : "text-ink-3 hover:bg-surface-2"
-              }`}
+              onClick={(e) => { e.stopPropagation(); setTab("paste"); }}
+              className={TAB_CLASSES(tab === "paste")}
             >
               <ClipboardPaste size={13} className="inline mr-1 -mt-0.5" />
               Paste
             </button>
+            <button
+              onClick={(e) => { e.stopPropagation(); setTab("github"); }}
+              className={TAB_CLASSES(tab === "github")}
+            >
+              <Github size={13} className="inline mr-1 -mt-0.5" />
+              GitHub URL
+            </button>
           </div>
 
-          {/* Upload zone */}
-          {!pasteMode ? (
+          {/* Upload tab */}
+          {tab === "upload" && (
             <div
               onDragEnter={(e) => handleDrag(e, true)}
               onDragLeave={(e) => handleDrag(e, false)}
@@ -282,8 +324,10 @@ export default function ContextPanel({
                 JSON glossary detected automatically
               </p>
             </div>
-          ) : (
-            /* Paste zone */
+          )}
+
+          {/* Paste tab */}
+          {tab === "paste" && (
             <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
               <textarea
                 value={pasteText}
@@ -304,7 +348,54 @@ export default function ContextPanel({
             </div>
           )}
 
-          {/* Loaded files list */}
+          {/* GitHub URL tab */}
+          {tab === "github" && (
+            <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
+              <p className="text-[0.7rem] text-ink-3 leading-relaxed">
+                Paste any public GitHub URL — a repo, a specific file, or a folder.
+                DocCraft fetches README, docs files, or OpenAPI specs automatically.
+              </p>
+              <div className="flex gap-2">
+                <div className="relative flex-1">
+                  <Link
+                    size={13}
+                    className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-4"
+                  />
+                  <input
+                    type="url"
+                    value={githubUrl}
+                    onChange={(e) => {
+                      setGithubUrl(e.target.value);
+                      setGithubError("");
+                    }}
+                    onKeyDown={(e) => e.key === "Enter" && handleGitHubFetch()}
+                    placeholder="https://github.com/owner/repo"
+                    className="w-full pl-8 pr-3 py-2 rounded-lg border border-surface-3 bg-surface-1 text-xs
+                               text-ink-1 placeholder:text-ink-4 focus:outline-none focus:ring-2
+                               focus:ring-brand-200 focus:border-brand-400 transition-all"
+                  />
+                </div>
+                <button
+                  onClick={handleGitHubFetch}
+                  disabled={!githubUrl.trim() || githubLoading}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-brand-600 text-white text-xs font-medium
+                             rounded-lg hover:bg-brand-700 disabled:opacity-40 transition-colors shrink-0"
+                >
+                  {githubLoading ? (
+                    <Loader2 size={13} className="animate-spin" />
+                  ) : (
+                    <Github size={13} />
+                  )}
+                  {githubLoading ? "Fetching…" : "Fetch"}
+                </button>
+              </div>
+              {githubError && (
+                <p className="text-[0.7rem] text-accent-red">{githubError}</p>
+              )}
+            </div>
+          )}
+
+          {/* Loaded files */}
           {loadedFiles.length > 0 && (
             <div className="mt-4 space-y-2">
               <div className="flex items-center justify-between">
@@ -347,7 +438,7 @@ export default function ContextPanel({
             </div>
           )}
 
-          {/* Glossary breakdown badge */}
+          {/* Glossary breakdown */}
           {glossaryData && (
             <div className="mt-3 px-3 py-2.5 bg-green-50 border border-green-100 rounded-xl">
               <div className="flex items-center gap-1.5 mb-1.5">
@@ -369,7 +460,9 @@ export default function ContextPanel({
                     <span className="text-[0.68rem] text-ink-3">
                       {Object.keys(glossaryData.preferred_terms).length} preferred
                       replacement
-                      {Object.keys(glossaryData.preferred_terms).length > 1 ? "s" : ""}
+                      {Object.keys(glossaryData.preferred_terms).length > 1
+                        ? "s"
+                        : ""}
                     </span>
                   )}
                 {glossaryData.approved_terms &&
