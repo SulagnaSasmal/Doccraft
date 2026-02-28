@@ -14,8 +14,12 @@ import {
   Copy,
   Check,
   Loader2,
+  ShieldCheck,
 } from "lucide-react";
 import type { DocConfig } from "@/app/page";
+import type { GlossaryData } from "@/lib/validateTerminology";
+import type { ComplianceIssue } from "@/app/api/compliance/route";
+import CompliancePanel from "@/components/CompliancePanel";
 
 const AI_ACTIONS = [
   { key: "simplify", label: "Simplify", icon: Minimize2, desc: "Simpler language" },
@@ -30,15 +34,21 @@ export default function DocumentEditor({
   onChange,
   onRefine,
   config,
+  glossaryData,
 }: {
   content: string;
   onChange: (c: string) => void;
   onRefine: (text: string, action: string) => Promise<string>;
   config: DocConfig;
+  glossaryData?: GlossaryData | null;
 }) {
   const [view, setView] = useState<"split" | "edit" | "preview">("split");
   const [refining, setRefining] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [complianceIssues, setComplianceIssues] = useState<ComplianceIssue[]>([]);
+  const [complianceLoading, setComplianceLoading] = useState(false);
+  const [showCompliance, setShowCompliance] = useState(false);
+  const [complianceRan, setComplianceRan] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const getSelectedText = (): { text: string; start: number; end: number } | null => {
@@ -135,6 +145,42 @@ ${markdownToBasicHTML(content)}
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const handleComplianceCheck = async () => {
+    if (showCompliance && complianceRan) {
+      setShowCompliance(false);
+      return;
+    }
+    setShowCompliance(true);
+    setComplianceLoading(true);
+    setComplianceRan(true);
+    try {
+      const res = await fetch("/api/compliance", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ document: content, glossaryData: glossaryData ?? null }),
+      });
+      if (!res.ok) throw new Error("Compliance check failed");
+      const data = await res.json();
+      setComplianceIssues(data.issues);
+    } catch {
+      setComplianceIssues([]);
+    } finally {
+      setComplianceLoading(false);
+    }
+  };
+
+  // Derive badge for MSTP button after a check has run
+  const errorCount = complianceIssues.filter((i) => i.severity === "error").length;
+  const issueCount = complianceIssues.length;
+  const badgeColor =
+    errorCount > 0
+      ? "bg-accent-red text-white"
+      : issueCount > 0
+      ? "bg-accent-amber text-white"
+      : complianceRan
+      ? "bg-accent-green text-white"
+      : null;
+
   return (
     <div className="animate-fade-in-up">
       {/* Toolbar */}
@@ -184,6 +230,31 @@ ${markdownToBasicHTML(content)}
             )}
           </div>
         </div>
+
+        {/* MSTP Check button */}
+        <button
+          onClick={handleComplianceCheck}
+          disabled={complianceLoading}
+          className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg
+                      transition-colors disabled:opacity-40 border
+                      ${showCompliance && complianceRan
+                        ? "bg-brand-50 text-brand-700 border-brand-200"
+                        : "text-ink-2 hover:bg-surface-2 border-surface-3"
+                      }`}
+        >
+          {complianceLoading
+            ? <Loader2 size={13} className="animate-spin" />
+            : <ShieldCheck size={13} />
+          }
+          MSTP Check
+          {complianceRan && badgeColor && (
+            <span className={`absolute -top-1.5 -right-1.5 min-w-[1.1rem] h-[1.1rem] px-1
+                             rounded-full text-[0.6rem] font-bold flex items-center justify-center
+                             ${badgeColor}`}>
+              {issueCount > 0 ? issueCount : "✓"}
+            </span>
+          )}
+        </button>
 
         {/* Export buttons */}
         <div className="flex items-center gap-1.5">
@@ -257,6 +328,15 @@ ${markdownToBasicHTML(content)}
       <p className="text-center text-xs text-ink-3 mt-3">
         💡 Select text in the editor, then click an AI action to refine just that section
       </p>
+
+      {/* Compliance panel */}
+      {showCompliance && (
+        <CompliancePanel
+          issues={complianceIssues}
+          isLoading={complianceLoading}
+          onClose={() => setShowCompliance(false)}
+        />
+      )}
     </div>
   );
 }
