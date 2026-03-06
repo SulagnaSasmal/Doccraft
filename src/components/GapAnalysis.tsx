@@ -70,7 +70,7 @@ export default function GapAnalysis({
         </h2>
         <p className="text-sm text-ink-2 mt-1">
           The AI identified {total} questions that would help produce better documentation.
-          Answer what you can — skip what you don't know yet.
+          Answer what you can — skip what you don&apos;t know yet.
         </p>
 
         {/* Progress bar */}
