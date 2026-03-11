@@ -9,8 +9,11 @@ import GapAnalysis from "@/components/GapAnalysis";
 import DocumentEditor from "@/components/DocumentEditor";
 import StatusBar from "@/components/StatusBar";
 import HistoryPanel from "@/components/HistoryPanel";
+import AuthModal from "@/components/AuthModal";
+import TeamPanel from "@/components/TeamPanel";
 import { useDocHistory } from "@/lib/useDocHistory";
 import type { GlossaryData } from "@/lib/validateTerminology";
+import { supabase } from "@/lib/supabase";
 import { Sparkles, X } from "lucide-react";
 
 export type AppStage = "upload" | "analyzing" | "questions" | "generating" | "editing";
@@ -62,6 +65,63 @@ export default function Home() {
 
   // History
   const { history, addSession, removeSession, clearAll } = useDocHistory();
+
+  // ── Phase 3: Auth + Cloud + Team ────────────────────────────────────────
+  const [user, setUser] = useState<{ id: string; email: string } | null>(null);
+  const [accessToken, setAccessToken] = useState<string>("");
+  const [showAuth, setShowAuth] = useState(false);
+  const [showTeam, setShowTeam] = useState(false);
+  const [cloudSaving, setCloudSaving] = useState(false);
+  const [cloudSaved, setCloudSaved] = useState(false);
+  const [currentDocId, setCurrentDocId] = useState<string | null>(null);
+
+  useEffect(() => {
+    // Restore session on mount
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        setUser({ id: session.user.id, email: session.user.email! });
+        setAccessToken(session.access_token);
+      }
+    });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        setUser({ id: session.user.id, email: session.user.email! });
+        setAccessToken(session.access_token);
+      } else {
+        setUser(null);
+        setAccessToken("");
+      }
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    setUser(null);
+    setAccessToken("");
+  };
+
+  const handleSaveToCloud = async () => {
+    if (!user) { setShowAuth(true); return; }
+    setCloudSaving(true);
+    try {
+      const title = config.docType ? `${DOC_TYPE_LABELS[config.docType] || config.docType} — ${new Date().toLocaleDateString()}` : "Untitled Document";
+      const res = await fetch("/api/docs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
+        body: JSON.stringify({ id: currentDocId || undefined, title, config, content: generatedDoc }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error);
+      setCurrentDocId(data.document.id);
+      setCloudSaved(true);
+      setTimeout(() => setCloudSaved(false), 3000);
+    } catch (err: any) {
+      setError(err.message || "Cloud save failed");
+    } finally {
+      setCloudSaving(false);
+    }
+  };
 
   // Format recommendation
   const [recommendation, setRecommendation] = useState<Recommendation | null>(null);
@@ -230,7 +290,14 @@ export default function Home() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Header stage={stage} onStartOver={handleStartOver} />
+      <Header
+        stage={stage}
+        onStartOver={handleStartOver}
+        user={user}
+        onShowAuth={() => setShowAuth(true)}
+        onSignOut={handleSignOut}
+        onShowTeam={() => setShowTeam(true)}
+      />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
         {error && (
@@ -342,11 +409,30 @@ export default function Home() {
             onRefine={handleRefine}
             config={config}
             glossaryData={glossaryData}
+            onSaveToCloud={handleSaveToCloud}
+            cloudSaving={cloudSaving}
+            cloudSaved={cloudSaved}
+            isLoggedIn={!!user}
           />
         )}
       </main>
 
       <StatusBar stage={stage} fileCount={fileNames.length} />
+
+      {/* Phase 3 modals */}
+      {showAuth && (
+        <AuthModal
+          onClose={() => setShowAuth(false)}
+          onAuth={(u) => { setUser(u); setShowAuth(false); }}
+        />
+      )}
+      {showTeam && user && (
+        <TeamPanel
+          user={user}
+          accessToken={accessToken}
+          onClose={() => setShowTeam(false)}
+        />
+      )}
     </div>
   );
 }

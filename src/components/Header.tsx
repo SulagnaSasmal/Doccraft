@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, RotateCcw } from "lucide-react";
+import { FileText, RotateCcw, Users, LogOut, User } from "lucide-react";
 import type { AppStage } from "@/app/page";
 
 const STAGE_LABELS: Record<AppStage, string> = {
@@ -14,9 +14,17 @@ const STAGE_LABELS: Record<AppStage, string> = {
 export default function Header({
   stage,
   onStartOver,
+  user,
+  onShowAuth,
+  onSignOut,
+  onShowTeam,
 }: {
   stage: AppStage;
   onStartOver: () => void;
+  user?: { id: string; email: string } | null;
+  onShowAuth?: () => void;
+  onSignOut?: () => void;
+  onShowTeam?: () => void;
 }) {
   const stages: AppStage[] = ["upload", "questions", "editing"];
 
@@ -70,16 +78,56 @@ export default function Header({
           })}
         </div>
 
-        {stage !== "upload" && (
-          <button
-            onClick={onStartOver}
-            className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-ink-2
-                       hover:text-ink-0 hover:bg-surface-2 rounded-lg transition-colors"
-          >
-            <RotateCcw size={13} />
-            Start Over
-          </button>
-        )}
+        <div className="flex items-center gap-2">
+          {stage !== "upload" && (
+            <button
+              onClick={onStartOver}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-ink-2
+                         hover:text-ink-0 hover:bg-surface-2 rounded-lg transition-colors"
+            >
+              <RotateCcw size={13} />
+              Start Over
+            </button>
+          )}
+          {/* Phase 3: Auth + Team */}
+          {onShowTeam && user && (
+            <button
+              onClick={onShowTeam}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-ink-2
+                         hover:text-ink-0 hover:bg-surface-2 rounded-lg transition-colors"
+              title="Team workspace"
+            >
+              <Users size={13} />
+              Team
+            </button>
+          )}
+          {user ? (
+            <div className="flex items-center gap-1.5">
+              <span className="flex items-center gap-1.5 px-3 py-1.5 text-xs text-ink-2">
+                <User size={12} className="text-brand-500" />
+                <span className="max-w-[120px] truncate">{user.email}</span>
+              </span>
+              <button
+                onClick={onSignOut}
+                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-ink-3
+                           hover:text-accent-red hover:bg-red-50 rounded-lg transition-colors"
+                title="Sign out"
+              >
+                <LogOut size={12} />
+              </button>
+            </div>
+          ) : (
+            onShowAuth && (
+              <button
+                onClick={onShowAuth}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-700
+                           bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg transition-colors"
+              >
+                Sign in
+              </button>
+            )
+          )}
+        </div>
       </div>
     </header>
   );

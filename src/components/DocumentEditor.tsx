@@ -17,7 +17,13 @@ import {
   ShieldCheck,
   GitGraph,
   FileDown,
+  ImageIcon,
+  Globe,
+  Cloud,
+  CloudCheck,
 } from "lucide-react";
+import InfographicPanel from "@/components/InfographicPanel";
+import PublishPanel from "@/components/PublishPanel";
 import type { DocConfig } from "@/app/page";
 import type { GlossaryData } from "@/lib/validateTerminology";
 import type { ComplianceIssue } from "@/app/api/compliance/route";
@@ -44,6 +50,10 @@ export default function DocumentEditor({
   onRefine: (text: string, action: string) => Promise<string>;
   config: DocConfig;
   glossaryData?: GlossaryData | null;
+  onSaveToCloud?: () => Promise<void>;
+  cloudSaving?: boolean;
+  cloudSaved?: boolean;
+  isLoggedIn?: boolean;
 }) {
   const [view, setView] = useState<"split" | "edit" | "preview">("split");
   const [refining, setRefining] = useState(false);
@@ -54,6 +64,8 @@ export default function DocumentEditor({
   const [complianceRan, setComplianceRan] = useState(false);
   const [showDiagram, setShowDiagram] = useState(false);
   const [docxExporting, setDocxExporting] = useState(false);
+  const [showInfographic, setShowInfographic] = useState(false);
+  const [showPublish, setShowPublish] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const getSelectedText = (): { text: string; start: number; end: number } | null => {
@@ -359,6 +371,45 @@ ${markdownToBasicHTML(content)}
               </span>
             )}
           </button>
+
+          {/* Phase 3: Infographic + Publish + Cloud Save */}
+          <button
+            onClick={() => { setShowInfographic(s => !s); setShowPublish(false); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border ${
+              showInfographic ? "bg-brand-50 text-brand-700 border-brand-200" : "text-ink-2 hover:bg-surface-2 border-surface-3"
+            }`}
+            title="Generate a DALL-E infographic from this document"
+          >
+            <ImageIcon size={13} />
+            Infographic
+          </button>
+          <button
+            onClick={() => { setShowPublish(s => !s); setShowInfographic(false); }}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border ${
+              showPublish ? "bg-brand-50 text-brand-700 border-brand-200" : "text-ink-2 hover:bg-surface-2 border-surface-3"
+            }`}
+            title="Publish to GitHub PR, Confluence, or Notion"
+          >
+            <Globe size={13} />
+            Publish
+          </button>
+          {onSaveToCloud && (
+            <button
+              onClick={onSaveToCloud}
+              disabled={cloudSaving}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border border-surface-3 text-ink-2 hover:bg-surface-2 disabled:opacity-40"
+              title={isLoggedIn ? "Save to your cloud library" : "Sign in to save to cloud"}
+            >
+              {cloudSaving ? (
+                <Loader2 size={13} className="animate-spin" />
+              ) : cloudSaved ? (
+                <CloudCheck size={13} className="text-accent-green" />
+              ) : (
+                <Cloud size={13} />
+              )}
+              {cloudSaved ? "Saved" : "Save ☁"}
+            </button>
+          )}
 
           {/* Export buttons */}
           <div className="flex items-center gap-1.5">
