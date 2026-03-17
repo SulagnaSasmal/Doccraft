@@ -3,6 +3,9 @@ import OpenAI from "openai";
 import { validateTerminology } from "@/lib/validateTerminology";
 import type { GlossaryData } from "@/lib/validateTerminology";
 
+export const runtime = 'edge';
+export const maxDuration = 30;
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface ComplianceIssue {

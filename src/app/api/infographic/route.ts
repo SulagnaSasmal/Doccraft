@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
+export const runtime = 'edge';
+export const maxDuration = 30;
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 function buildInfographicPrompt(docContent: string, style: string): string {
