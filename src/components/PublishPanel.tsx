@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Github, Globe, BookOpen, Loader2, CheckCircle2, ExternalLink, X } from "lucide-react";
+import { safeResJson } from "@/lib/safeResJson";
 
 type Tab = "github" | "confluence" | "notion";
 
@@ -68,8 +69,8 @@ export default function PublishPanel({
             token: ghToken,
           }),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
+        const data = await safeResJson(res);
+        if (!res.ok) throw new Error(data.error || "GitHub publish failed");
         setResult({ url: data.url, target: "github", action: data.action });
       }
 
@@ -91,8 +92,8 @@ export default function PublishPanel({
             parentPageId: cfParentId || undefined,
           }),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
+        const data = await safeResJson(res);
+        if (!res.ok) throw new Error(data.error || "Confluence publish failed");
         setResult({ url: data.url, target: "confluence" });
       }
 
@@ -111,8 +112,8 @@ export default function PublishPanel({
             content,
           }),
         });
-        const data = await res.json();
-        if (!res.ok) throw new Error(data.error);
+        const data = await safeResJson(res);
+        if (!res.ok) throw new Error(data.error || "Notion publish failed");
         setResult({ url: data.url, target: "notion" });
       }
     } catch (err: any) {

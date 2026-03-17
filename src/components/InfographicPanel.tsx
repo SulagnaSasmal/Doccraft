@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ImageIcon, Loader2, Download, RefreshCw, X } from "lucide-react";
+import { safeResJson } from "@/lib/safeResJson";
 
 const STYLES = [
   { key: "summary",   label: "Summary Grid",  desc: "Structured info graphic with sections" },
@@ -34,12 +35,10 @@ export default function InfographicPanel({
         body: JSON.stringify({ content, style }),
       });
 
+      const data = await safeResJson(res);
       if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || "Generation failed");
+        throw new Error(data.error || "Infographic generation failed");
       }
-
-      const data = await res.json();
       setImageUrl(data.url);
     } catch (err: any) {
       setError(err.message || "Failed to generate infographic");

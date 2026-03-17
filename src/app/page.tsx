@@ -14,20 +14,10 @@ import TeamPanel from "@/components/TeamPanel";
 import { useDocHistory } from "@/lib/useDocHistory";
 import type { GlossaryData } from "@/lib/validateTerminology";
 import { supabase } from "@/lib/supabase";
+import { safeResJson } from "@/lib/safeResJson";
 import { Sparkles, X } from "lucide-react";
 
 export type AppStage = "upload" | "analyzing" | "questions" | "generating" | "editing";
-
-// Safely parse a fetch response as JSON; returns {} on empty/non-JSON bodies
-async function safeResJson(res: Response): Promise<any> {
-  try {
-    const text = await res.text();
-    if (!text.trim()) return {};
-    return JSON.parse(text);
-  } catch {
-    return {};
-  }
-}
 
 export interface DocConfig {
   docType: string;
@@ -155,7 +145,7 @@ export default function Home() {
           body: JSON.stringify({ content: uploadedContent }),
         });
         if (!res.ok) return;
-        const data = await res.json();
+        const data = await safeResJson(res);
         // Only show if confidence is reasonable and differs from current selection
         if (data.confidence >= 0.65 && data.type !== config.docType) {
           setRecommendation(data);
@@ -271,8 +261,8 @@ export default function Home() {
     });
 
     if (!res.ok) throw new Error("Refinement failed");
-    const data = await res.json();
-    return data.refined;
+    const data = await safeResJson(res);
+    return data.refined ?? "";
   };
 
   const handleStartOver = () => {

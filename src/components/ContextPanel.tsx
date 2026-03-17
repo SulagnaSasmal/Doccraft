@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, DragEvent } from "react";
+import { safeResJson } from "@/lib/safeResJson";
 import {
   Library,
   Upload,
@@ -167,7 +168,7 @@ export default function ContextPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ url: githubUrl.trim() }),
       });
-      const data = await res.json();
+      const data = await safeResJson(res);
       if (!res.ok) throw new Error(data.error || "Fetch failed");
 
       const combined = contextText

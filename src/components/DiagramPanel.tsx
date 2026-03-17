@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { GitGraph, Loader2, Copy, Check, Plus, RefreshCw, X, ChevronDown } from "lucide-react";
+import { safeResJson } from "@/lib/safeResJson";
 
 type DiagramType = "flowchart" | "sequenceDiagram" | "stateDiagram-v2";
 
@@ -39,8 +40,8 @@ export default function DiagramPanel({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ document, diagramType: type }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Generation failed");
+      const data = await safeResJson(res);
+      if (!res.ok) throw new Error(data.error || "Diagram generation failed");
       setMermaidCode(data.mermaid);
     } catch (err: any) {
       setError(err.message || "Generation failed");

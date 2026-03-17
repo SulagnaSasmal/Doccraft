@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { Users, Plus, Copy, Check, LogOut, Crown, Loader2, X } from "lucide-react";
+import { safeResJson } from "@/lib/safeResJson";
 
 interface TeamMember { id: string; user_id: string; role: string; joined_at: string; email?: string; }
 interface Team { id: string; name: string; invite_code: string; owner_id: string; }
@@ -35,7 +36,7 @@ export default function TeamPanel({
     setLoading(true);
     try {
       const res = await fetch("/api/teams", { headers });
-      const data = await res.json();
+      const data = await safeResJson(res);
       setTeam(data.team || null);
       setMembers(data.members || []);
       setRole(data.role || "");
@@ -53,8 +54,8 @@ export default function TeamPanel({
     setActionLoading(true); setError("");
     try {
       const res = await fetch("/api/teams", { method: "POST", headers, body: JSON.stringify({ action: "create", name: newTeamName }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await safeResJson(res);
+      if (!res.ok) throw new Error(data.error || "Failed to create team");
       setTeam(data.team); setRole(data.role); setMode("view");
     } catch (err: any) { setError(err.message); }
     finally { setActionLoading(false); }
@@ -65,8 +66,8 @@ export default function TeamPanel({
     setActionLoading(true); setError("");
     try {
       const res = await fetch("/api/teams", { method: "POST", headers, body: JSON.stringify({ action: "join", inviteCode }) });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await safeResJson(res);
+      if (!res.ok) throw new Error(data.error || "Failed to join team");
       setTeam(data.team); setRole(data.role); setMode("view"); await loadTeam();
     } catch (err: any) { setError(err.message); }
     finally { setActionLoading(false); }
@@ -77,7 +78,7 @@ export default function TeamPanel({
     setActionLoading(true); setError("");
     try {
       const res = await fetch(`/api/teams?teamId=${team.id}`, { method: "DELETE", headers });
-      if (!res.ok) { const d = await res.json(); throw new Error(d.error); }
+      if (!res.ok) { const d = await safeResJson(res); throw new Error(d.error || "Failed to leave team"); }
       setTeam(null); setMembers([]); setRole("");
     } catch (err: any) { setError(err.message); }
     finally { setActionLoading(false); }
