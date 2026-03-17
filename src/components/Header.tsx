@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, RotateCcw, Users, LogOut, User, Cloud, HelpCircle } from "lucide-react";
+import { FileText, RotateCcw, Users, LogOut, User, Cloud, HelpCircle, Webhook } from "lucide-react";
 import type { AppStage } from "@/app/page";
 
 const STAGE_LABELS: Record<AppStage, string> = {
@@ -18,6 +18,7 @@ export default function Header({
   onShowAuth,
   onSignOut,
   onShowTeam,
+  onShowAutomation,
 }: {
   stage: AppStage;
   onStartOver: () => void;
@@ -25,6 +26,7 @@ export default function Header({
   onShowAuth?: () => void;
   onSignOut?: () => void;
   onShowTeam?: () => void;
+  onShowAutomation?: () => void;
 }) {
   const stages: AppStage[] = ["upload", "questions", "editing"];
 
@@ -87,6 +89,18 @@ export default function Header({
             >
               <RotateCcw size={13} />
               Start Over
+            </button>
+          )}
+          {/* Automation tab */}
+          {onShowAutomation && (
+            <button
+              onClick={onShowAutomation}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-ink-3
+                         hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
+              title="CI/CD Automation"
+            >
+              <Webhook size={14} />
+              <span className="hidden md:inline">Automate</span>
             </button>
           )}
           {/* Help Center link */}

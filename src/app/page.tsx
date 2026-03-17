@@ -11,6 +11,7 @@ import StatusBar from "@/components/StatusBar";
 import HistoryPanel from "@/components/HistoryPanel";
 import AuthModal from "@/components/AuthModal";
 import TeamPanel from "@/components/TeamPanel";
+import AutomationPanel from "@/components/AutomationPanel";
 import { useDocHistory, type DocSession } from "@/lib/useDocHistory";
 import type { GlossaryData } from "@/lib/validateTerminology";
 import { supabase } from "@/lib/supabase";
@@ -75,6 +76,7 @@ export default function Home() {
   const [accessToken, setAccessToken] = useState<string>("");
   const [showAuth, setShowAuth] = useState(false);
   const [showTeam, setShowTeam] = useState(false);
+  const [showAutomation, setShowAutomation] = useState(false);
   const [cloudSaving, setCloudSaving] = useState(false);
   const [cloudSaved, setCloudSaved] = useState(false);
   const [currentDocId, setCurrentDocId] = useState<string | null>(null);
@@ -409,6 +411,7 @@ export default function Home() {
         onShowAuth={() => setShowAuth(true)}
         onSignOut={handleSignOut}
         onShowTeam={() => setShowTeam(true)}
+        onShowAutomation={() => setShowAutomation(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
@@ -576,6 +579,9 @@ export default function Home() {
           accessToken={accessToken}
           onClose={() => setShowTeam(false)}
         />
+      )}
+      {showAutomation && (
+        <AutomationPanel onClose={() => setShowAutomation(false)} />
       )}
     </div>
   );
