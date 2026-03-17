@@ -146,7 +146,7 @@ Upload a `.json` file matching this schema to enforce terminology automatically:
 | Framework | Next.js 14 (App Router) |
 | Language | TypeScript |
 | Styling | Tailwind CSS |
-| AI | OpenAI GPT-4o (generation + compliance), GPT-4o-mini (inline edits + quick fixes) |
+| AI | OpenAI GPT-4o-mini (all generation, compliance, inline edits) |
 | Preview | React Markdown |
 | Icons | Lucide React |
 
@@ -178,12 +178,20 @@ Vercel auto-deploys on every push to `main`.
 - [x] Format recommendation engine — AI analyses your uploaded content and suggests the best doc type (with one-click accept)
 - [x] DOCX export — download your document as a Word `.docx` file
 
-### Phase 3 — Future
-- [ ] User accounts + cloud storage (Supabase)
-- [ ] GitHub write-back (create PR with generated docs)
-- [ ] Publish to Confluence / Notion
-- [ ] Team collaboration and review workflows
-- [ ] DALL-E infographic generation
+### Phase 3 — Complete ✅
+- [x] User accounts + cloud storage (Supabase auth + document library)
+- [x] GitHub write-back — create a PR with generated docs in one click
+- [x] Publish to Confluence / Notion
+- [x] Team collaboration and review workflows (team workspaces + invite codes)
+- [x] DALL-E infographic generation from document content
+
+### Phase 4 — Planned
+- [ ] Streaming responses — stream AI output token-by-token for instant feedback
+- [ ] Vercel Pro upgrade — lift 10s function timeout for longer documents
+- [ ] Multi-language output — generate docs in Spanish, French, German, Japanese
+- [ ] Version diffing — compare two document versions side-by-side
+- [ ] Webhook / CI integration — auto-generate docs on repo push via GitHub Actions
+- [ ] Custom compliance rule sets — upload your own style rules beyond MSTP
 
 ---
 
