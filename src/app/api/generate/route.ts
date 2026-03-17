@@ -120,17 +120,17 @@ IMPORTANT: Return ONLY the JSON array, no markdown fences, no explanation. Examp
 [{"id":"q1","question":"What happens when...","category":"missing"}]`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-4o-mini",
     messages: [
       { role: "system", content: systemPrompt },
       {
         role: "user",
         content: contextText?.trim()
-          ? `CONTEXT DOCUMENTS (existing docs, style guide, terminology — identify gaps relative to these):\n${contextText.slice(0, 6000)}\n\n---\n\nSOURCE MATERIAL TO DOCUMENT:\n${content.slice(0, 12000)}`
-          : `Here is the raw source material:\n\n${content.slice(0, 12000)}`,
+          ? `CONTEXT DOCUMENTS (existing docs, style guide, terminology — identify gaps relative to these):\n${contextText.slice(0, 3000)}\n\n---\n\nSOURCE MATERIAL TO DOCUMENT:\n${content.slice(0, 8000)}`
+          : `Here is the raw source material:\n\n${content.slice(0, 8000)}`,
       },
     ],
-    max_tokens: 2000,
+    max_tokens: 800,
     temperature: 0.3,
   });
 
@@ -201,9 +201,9 @@ ${config.customInstructions ? `ADDITIONAL INSTRUCTIONS: ${config.customInstructi
 
   const userMessage = [
     contextText?.trim()
-      ? `CONTEXT DOCUMENTS (existing docs, style guide, terminology — write consistently with these):\n${contextText.slice(0, 6000)}\n\n---`
+      ? `CONTEXT DOCUMENTS (existing docs, style guide, terminology — write consistently with these):\n${contextText.slice(0, 3000)}\n\n---`
       : null,
-    `SOURCE MATERIAL:\n${content.slice(0, 12000)}`,
+    `SOURCE MATERIAL:\n${content.slice(0, 10000)}`,
     answeredContext ? `\nCLARIFICATIONS FROM SME:\n${answeredContext}` : null,
     skippedContext ? `\nUNANSWERED QUESTIONS (make reasonable assumptions):\n${skippedContext}` : null,
     "\nPlease generate the complete documentation now.",
@@ -212,12 +212,12 @@ ${config.customInstructions ? `ADDITIONAL INSTRUCTIONS: ${config.customInstructi
     .join("\n\n");
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o",
+    model: "gpt-4o-mini",
     messages: [
       { role: "system", content: systemPrompt },
       { role: "user", content: userMessage },
     ],
-    max_tokens: 4000,
+    max_tokens: 3000,
     temperature: 0.4,
   });
 

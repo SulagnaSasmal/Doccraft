@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
       : "Choose the most appropriate diagram type (flowchart, sequenceDiagram, or stateDiagram-v2) based on the content.";
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o",
+      model: "gpt-4o-mini",
       messages: [
         {
           role: "system",
