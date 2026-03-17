@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, RotateCcw, Users, LogOut, User, Cloud } from "lucide-react";
+import { FileText, RotateCcw, Users, LogOut, User, Cloud, HelpCircle } from "lucide-react";
 import type { AppStage } from "@/app/page";
 
 const STAGE_LABELS: Record<AppStage, string> = {
@@ -89,6 +89,17 @@ export default function Header({
               Start Over
             </button>
           )}
+          {/* Help Center link */}
+          <a
+            href="https://sulagnasasmal.github.io/doccraft-help-center/"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-ink-3
+                       hover:text-brand-600 hover:bg-brand-50 rounded-lg transition-colors"
+            title="Help Center"
+          >
+            <HelpCircle size={15} />
+          </a>
           {/* Phase 3: Auth + Team */}
           {onShowTeam && user && (
             <button
