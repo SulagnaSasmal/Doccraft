@@ -18,6 +18,17 @@ import { Sparkles, X } from "lucide-react";
 
 export type AppStage = "upload" | "analyzing" | "questions" | "generating" | "editing";
 
+// Safely parse a fetch response as JSON; returns {} on empty/non-JSON bodies
+async function safeResJson(res: Response): Promise<any> {
+  try {
+    const text = await res.text();
+    if (!text.trim()) return {};
+    return JSON.parse(text);
+  } catch {
+    return {};
+  }
+}
+
 export interface DocConfig {
   docType: string;
   audience: string;
@@ -111,8 +122,8 @@ export default function Home() {
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${accessToken}` },
         body: JSON.stringify({ id: currentDocId || undefined, title, config, content: generatedDoc }),
       });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error);
+      const data = await safeResJson(res);
+      if (!res.ok) throw new Error(data.error || "Cloud save failed");
       setCurrentDocId(data.document.id);
       setCloudSaved(true);
       setTimeout(() => setCloudSaved(false), 3000);
@@ -192,12 +203,12 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Analysis failed");
+        const errData = await safeResJson(res);
+        throw new Error(errData.error || "Analysis failed — the server may have timed out. Please try again.");
       }
 
-      const data = await res.json();
-      setQuestions(data.questions);
+      const data = await safeResJson(res);
+      setQuestions(data.questions || []);
       setStage("questions");
     } catch (err: any) {
       setError(err.message || "Something went wrong during analysis.");
@@ -223,11 +234,12 @@ export default function Home() {
       });
 
       if (!res.ok) {
-        const errData = await res.json();
-        throw new Error(errData.error || "Generation failed");
+        const errData = await safeResJson(res);
+        throw new Error(errData.error || "Generation failed — the server may have timed out. Please try again.");
       }
 
-      const data = await res.json();
+      const data = await safeResJson(res);
+      if (!data.document) throw new Error("No document returned — the server may have timed out. Please try again.");
       setGeneratedDoc(data.document);
       setStage("editing");
 

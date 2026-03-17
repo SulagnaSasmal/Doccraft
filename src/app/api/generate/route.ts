@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 
+// Allow up to 60 seconds for OpenAI to respond (requires Vercel Pro plan; Hobby is capped at 10s)
+export const maxDuration = 60;
+
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 const TEMPLATES: Record<string, string> = {
