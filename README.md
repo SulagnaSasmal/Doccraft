@@ -156,7 +156,11 @@ Upload a `.json` file matching this schema to enforce terminology automatically:
 
 1. Push your code to GitHub
 2. Go to [vercel.com](https://vercel.com) → Import your repo
-3. Add environment variable: `OPENAI_API_KEY`
+3. Add environment variables:
+   - `OPENAI_API_KEY` — required for AI generation
+   - `NEXT_PUBLIC_SUPABASE_URL` — required for auth and cloud save
+   - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — required for auth and cloud save
+   - `GITHUB_TOKEN` — optional, for GitHub repo imports
 4. Deploy
 
 Vercel auto-deploys on every push to `main`.
@@ -185,13 +189,46 @@ Vercel auto-deploys on every push to `main`.
 - [x] Team collaboration and review workflows (team workspaces + invite codes)
 - [x] DALL-E infographic generation from document content
 
-### Phase 4 — Planned
+### Phase 4 — In Progress 🚧
 - [ ] Streaming responses — stream AI output token-by-token for instant feedback
-- [ ] Vercel Pro upgrade — lift 10s function timeout for longer documents
 - [ ] Multi-language output — generate docs in Spanish, French, German, Japanese
 - [ ] Version diffing — compare two document versions side-by-side
-- [ ] Webhook / CI integration — auto-generate docs on repo push via GitHub Actions
 - [ ] Custom compliance rule sets — upload your own style rules beyond MSTP
+- [ ] Webhook / CI integration — auto-generate docs on repo push via GitHub Actions
+
+### Phase 5 — Marketability & Growth 🚀
+- [ ] **Landing page** — marketing site with feature showcase, demo video, testimonials, and pricing
+- [ ] **Freemium pricing model** — Free tier (5 docs/month, 3 exports) → Pro ($12/mo: unlimited docs, priority API, team features) → Enterprise (custom: SSO, audit logs, SLA)
+- [ ] **Template marketplace** — community-contributed doc templates (onboarding guides, SOPs, runbooks, incident reports, design docs)
+- [ ] **Chrome extension** — right-click any web page → send content to DocCraft for instant documentation
+- [ ] **VS Code extension** — generate docs from code comments, README stubs, or selected code blocks without leaving the editor
+- [ ] **REST API / SDK** — headless API for CI/CD pipelines, enabling auto-doc generation on every pull request
+- [ ] **White-label / embed** — embeddable widget that other SaaS products can integrate into their own dashboards
+- [ ] **Analytics dashboard** — doc generation stats, compliance scores over time, team productivity metrics
+- [ ] **SSO / SAML** — enterprise single sign-on (Okta, Azure AD, Google Workspace)
+- [ ] **Audit log** — full history of who generated, edited, approved, and published each document
+- [ ] **Custom branding** — teams can set their logo, colors, and footer on exported documents
+- [ ] **Approval workflows** — route generated docs through review → approve → publish pipeline with email notifications
+- [ ] **Slack / Teams bot** — `/doccraft generate` from a channel; share generated docs directly in chat
+- [ ] **Doc quality score** — AI-powered readability + completeness + compliance composite score per document
+- [ ] **SEO optimization** — auto-generate meta descriptions, slugs, and structured data for published docs
+
+---
+
+## Competitive Positioning
+
+| Feature | DocCraft AI | Notion AI | GitBook | ReadMe | Mintlify |
+|---|---|---|---|---|---|
+| AI doc generation from raw content | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Gap analysis before writing | ✅ | ❌ | ❌ | ❌ | ❌ |
+| MSTP compliance checking | ✅ | ❌ | ❌ | ❌ | ❌ |
+| One-click compliance fix | ✅ | ❌ | ❌ | ❌ | ❌ |
+| AI inline editing (simplify, expand, etc.) | ✅ | ✅ | ❌ | ❌ | ❌ |
+| Mermaid diagram generation | ✅ | ❌ | ❌ | ❌ | ✅ |
+| Multi-format export (HTML, MD, PDF, DOCX) | ✅ | Partial | Partial | ❌ | ❌ |
+| GitHub PR publishing | ✅ | ❌ | ✅ | ❌ | ✅ |
+| Glossary + terminology enforcement | ✅ | ❌ | ❌ | ❌ | ❌ |
+| Free self-hosted option | ✅ | ❌ | ❌ | ❌ | ❌ |
 
 ---
 

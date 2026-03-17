@@ -15,7 +15,7 @@ import { useDocHistory } from "@/lib/useDocHistory";
 import type { GlossaryData } from "@/lib/validateTerminology";
 import { supabase } from "@/lib/supabase";
 import { safeResJson } from "@/lib/safeResJson";
-import { Sparkles, X } from "lucide-react";
+import { Sparkles, X, Cloud } from "lucide-react";
 
 export type AppStage = "upload" | "analyzing" | "questions" | "generating" | "editing";
 
@@ -326,6 +326,20 @@ export default function Home() {
 
         {(stage === "upload" || stage === "analyzing") && (
           <>
+            {/* Auth nudge — show once on upload stage when not signed in */}
+            {!user && stage === "upload" && (
+              <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-brand-50 to-indigo-50 border border-brand-200/60 rounded-xl animate-fade-in-up">
+                <Cloud size={16} className="text-brand-500 shrink-0" />
+                <p className="flex-1 text-xs text-ink-2">
+                  <span className="font-semibold text-ink-0">No account needed</span> — analyze, generate, and export docs for free.{" "}
+                  <button onClick={() => setShowAuth(true)} className="text-brand-700 font-semibold hover:underline">
+                    Sign in
+                  </button>{" "}
+                  to unlock cloud save, team workspaces, and GitHub publishing.
+                </p>
+              </div>
+            )}
+
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
               <div className="lg:col-span-2">
                 <UploadPanel

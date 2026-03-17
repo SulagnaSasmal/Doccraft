@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, RotateCcw, Users, LogOut, User } from "lucide-react";
+import { FileText, RotateCcw, Users, LogOut, User, Cloud } from "lucide-react";
 import type { AppStage } from "@/app/page";
 
 const STAGE_LABELS: Record<AppStage, string> = {
@@ -120,9 +120,10 @@ export default function Header({
             onShowAuth && (
               <button
                 onClick={onShowAuth}
-                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-brand-700
-                           bg-brand-50 hover:bg-brand-100 border border-brand-200 rounded-lg transition-colors"
+                className="flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-white
+                           bg-brand-700 hover:bg-brand-800 rounded-lg transition-colors shadow-sm"
               >
+                <Cloud size={13} />
                 Sign in
               </button>
             )
