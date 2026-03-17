@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { supabase } from "@/lib/supabase";
-import { X, Loader2, Mail, Lock, User } from "lucide-react";
+import { supabase, isSupabaseConfigured } from "@/lib/supabase";
+import { X, Loader2, Mail, Lock, User, AlertTriangle } from "lucide-react";
 
 type AuthMode = "signin" | "signup" | "magic";
 
@@ -74,7 +74,21 @@ export default function AuthModal({ onClose, onAuth }: {
 
         {/* Body */}
         <div className="px-6 py-5">
-          {magicSent ? (
+          {!isSupabaseConfigured ? (
+            <div className="text-center py-6">
+              <AlertTriangle size={32} className="mx-auto text-amber-500 mb-3" />
+              <p className="font-semibold text-ink-0">Authentication not configured</p>
+              <p className="text-sm text-ink-3 mt-1">
+                Supabase credentials are missing. Add <code className="text-xs bg-surface-2 px-1 py-0.5 rounded">NEXT_PUBLIC_SUPABASE_URL</code> and <code className="text-xs bg-surface-2 px-1 py-0.5 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> to your environment variables.
+              </p>
+              <button
+                onClick={onClose}
+                className="mt-4 text-sm text-brand-600 hover:underline"
+              >
+                Close
+              </button>
+            </div>
+          ) : magicSent ? (
             <div className="text-center py-6">
               <div className="text-4xl mb-3">✉️</div>
               <p className="font-semibold text-ink-0">Check your inbox</p>
@@ -135,7 +149,7 @@ export default function AuthModal({ onClose, onAuth }: {
           )}
 
           {/* Mode switchers */}
-          {!magicSent && (
+          {isSupabaseConfigured && !magicSent && (
             <div className="mt-4 flex items-center justify-center gap-4 text-xs text-ink-3">
               {mode !== "signin" && (
                 <button onClick={() => setMode("signin")} className="hover:text-brand-600 transition-colors">

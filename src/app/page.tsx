@@ -181,6 +181,9 @@ export default function Home() {
     setStage("analyzing");
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 55000);
+
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -190,18 +193,23 @@ export default function Home() {
           config,
           contextText,
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
 
       if (!res.ok) {
         const errData = await safeResJson(res);
-        throw new Error(errData.error || "Analysis failed — the server may have timed out. Please try again.");
+        throw new Error(errData.error || `Server returned ${res.status}. Please try again.`);
       }
 
       const data = await safeResJson(res);
       setQuestions(data.questions || []);
       setStage("questions");
     } catch (err: any) {
-      setError(err.message || "Something went wrong during analysis.");
+      const msg = err.name === "AbortError"
+        ? "Request timed out — the server took too long. Please try again with shorter content."
+        : err.message || "Something went wrong during analysis.";
+      setError(msg);
       setStage("upload");
     }
   };
@@ -211,6 +219,9 @@ export default function Home() {
     setError("");
 
     try {
+      const controller = new AbortController();
+      const timeout = setTimeout(() => controller.abort(), 55000);
+
       const res = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -221,15 +232,17 @@ export default function Home() {
           answers: answeredQuestions,
           contextText,
         }),
+        signal: controller.signal,
       });
+      clearTimeout(timeout);
 
       if (!res.ok) {
         const errData = await safeResJson(res);
-        throw new Error(errData.error || "Generation failed — the server may have timed out. Please try again.");
+        throw new Error(errData.error || `Server returned ${res.status}. Please try again.`);
       }
 
       const data = await safeResJson(res);
-      if (!data.document) throw new Error("No document returned — the server may have timed out. Please try again.");
+      if (!data.document) throw new Error("No document returned. Please try again.");
       setGeneratedDoc(data.document);
       setStage("editing");
 
@@ -240,7 +253,10 @@ export default function Home() {
         generatedDoc: data.document,
       });
     } catch (err: any) {
-      setError(err.message || "Something went wrong during generation.");
+      const msg = err.name === "AbortError"
+        ? "Request timed out — the server took too long. Please try again with shorter content."
+        : err.message || "Something went wrong during generation.";
+      setError(msg);
       setStage("questions");
     }
   };
