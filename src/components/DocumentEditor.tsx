@@ -20,7 +20,7 @@ import {
   ImageIcon,
   Globe,
   Cloud,
-  CloudCheck,
+  CloudUpload,
 } from "lucide-react";
 import InfographicPanel from "@/components/InfographicPanel";
 import PublishPanel from "@/components/PublishPanel";
@@ -44,6 +44,10 @@ export default function DocumentEditor({
   onRefine,
   config,
   glossaryData,
+  onSaveToCloud,
+  cloudSaving,
+  cloudSaved,
+  isLoggedIn,
 }: {
   content: string;
   onChange: (c: string) => void;
@@ -403,7 +407,7 @@ ${markdownToBasicHTML(content)}
               {cloudSaving ? (
                 <Loader2 size={13} className="animate-spin" />
               ) : cloudSaved ? (
-                <CloudCheck size={13} className="text-accent-green" />
+                <CloudUpload size={13} className="text-accent-green" />
               ) : (
                 <Cloud size={13} />
               )}

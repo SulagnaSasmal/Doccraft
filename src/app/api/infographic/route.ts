@@ -53,7 +53,7 @@ export async function POST(req: NextRequest) {
       style: "natural",
     });
 
-    const url = response.data[0]?.url;
+    const url = response.data?.[0]?.url;
     if (!url) throw new Error("No image returned");
 
     return NextResponse.json({ url, style });
