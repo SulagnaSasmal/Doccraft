@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import {
   Download,
@@ -21,6 +21,9 @@ import {
   Globe,
   Cloud,
   CloudUpload,
+  GitCompare,
+  ShieldPlus,
+  Camera,
 } from "lucide-react";
 import InfographicPanel from "@/components/InfographicPanel";
 import PublishPanel from "@/components/PublishPanel";
@@ -29,6 +32,16 @@ import type { GlossaryData } from "@/lib/validateTerminology";
 import type { ComplianceIssue } from "@/app/api/compliance/route";
 import CompliancePanel from "@/components/CompliancePanel";
 import DiagramPanel from "@/components/DiagramPanel";
+import ComplianceRulesPanel from "@/components/ComplianceRulesPanel";
+import VersionDiffPanel from "@/components/VersionDiffPanel";
+import { safeResJson } from "@/lib/safeResJson";
+import {
+  CUSTOM_COMPLIANCE_RULES_STORAGE_KEY,
+  sanitizeComplianceRules,
+  serializeComplianceRules,
+  type CustomComplianceRule,
+} from "@/lib/complianceRules";
+import type { DocSession } from "@/lib/useDocHistory";
 
 const AI_ACTIONS = [
   { key: "simplify", label: "Simplify", icon: Minimize2, desc: "Simpler language" },
@@ -44,7 +57,10 @@ export default function DocumentEditor({
   onRefine,
   config,
   glossaryData,
+  history,
+  baselineContent,
   onSaveToCloud,
+  onSaveVersion,
   cloudSaving,
   cloudSaved,
   isLoggedIn,
@@ -54,7 +70,10 @@ export default function DocumentEditor({
   onRefine: (text: string, action: string) => Promise<string>;
   config: DocConfig;
   glossaryData?: GlossaryData | null;
+  history: DocSession[];
+  baselineContent?: string;
   onSaveToCloud?: () => Promise<void>;
+  onSaveVersion?: () => void;
   cloudSaving?: boolean;
   cloudSaved?: boolean;
   isLoggedIn?: boolean;
@@ -70,7 +89,50 @@ export default function DocumentEditor({
   const [docxExporting, setDocxExporting] = useState(false);
   const [showInfographic, setShowInfographic] = useState(false);
   const [showPublish, setShowPublish] = useState(false);
+  const [showDiff, setShowDiff] = useState(false);
+  const [showRules, setShowRules] = useState(false);
+  const [customRules, setCustomRules] = useState<CustomComplianceRule[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const raw = window.localStorage.getItem(CUSTOM_COMPLIANCE_RULES_STORAGE_KEY);
+      setCustomRules(sanitizeComplianceRules(raw ? JSON.parse(raw) : []));
+    } catch {
+      setCustomRules([]);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(
+      CUSTOM_COMPLIANCE_RULES_STORAGE_KEY,
+      serializeComplianceRules(customRules)
+    );
+  }, [customRules]);
+
+  const versionOptions = useMemo(() => {
+    const options = [] as Array<{ id: string; label: string; content: string; timestamp?: number }>;
+
+    if (baselineContent?.trim()) {
+      options.push({ id: "baseline", label: "Original draft", content: baselineContent });
+    }
+
+    history.forEach((session) => {
+      options.push({
+        id: session.id,
+        label: session.label || (session.kind === "snapshot" ? "Saved snapshot" : "Generated draft"),
+        content: session.generatedDoc,
+        timestamp: session.timestamp,
+      });
+    });
+
+    return options.filter((option, index, collection) =>
+      collection.findIndex((candidate) => candidate.id === option.id) === index
+    );
+  }, [baselineContent, history]);
 
   const getSelectedText = (): { text: string; start: number; end: number } | null => {
     const el = textareaRef.current;
@@ -220,10 +282,14 @@ ${markdownToBasicHTML(content)}
       const res = await fetch("/api/compliance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ document: doc, glossaryData: glossaryData ?? null }),
+        body: JSON.stringify({
+          document: doc,
+          glossaryData: glossaryData ?? null,
+          customRules,
+        }),
       });
       if (!res.ok) throw new Error("Compliance check failed");
-      const data = await res.json();
+      const data = await safeResJson(res);
       setComplianceIssues(data.issues);
     } catch {
       setComplianceIssues([]);
@@ -266,7 +332,7 @@ ${markdownToBasicHTML(content)}
         }),
       });
       if (!res.ok) return;
-      const data = await res.json();
+      const data = await safeResJson(res);
       onChange(content.replace(issue.problematic_text, data.refined));
     } catch {
       // Fix silently fails; user can edit manually
@@ -337,6 +403,49 @@ ${markdownToBasicHTML(content)}
         {/* Right-side controls */}
         <div className="flex items-center gap-2 flex-wrap">
           {/* Diagram button */}
+          <button
+            onClick={() => setShowDiff((state) => !state)}
+            disabled={versionOptions.length === 0}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border disabled:opacity-40 ${
+              showDiff
+                ? "bg-brand-50 text-brand-700 border-brand-200"
+                : "text-ink-2 hover:bg-surface-2 border-surface-3"
+            }`}
+            title="Compare this draft with earlier versions"
+          >
+            <GitCompare size={13} />
+            Diff
+          </button>
+
+          <button
+            onClick={() => setShowRules((state) => !state)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border ${
+              showRules
+                ? "bg-brand-50 text-brand-700 border-brand-200"
+                : "text-ink-2 hover:bg-surface-2 border-surface-3"
+            }`}
+            title="Manage custom compliance rules"
+          >
+            <ShieldPlus size={13} />
+            Rules
+            {customRules.length > 0 && (
+              <span className="px-1.5 py-0.5 rounded-full bg-white border border-brand-200 text-[0.62rem] font-bold">
+                {customRules.length}
+              </span>
+            )}
+          </button>
+
+          {onSaveVersion && (
+            <button
+              onClick={onSaveVersion}
+              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border border-surface-3 text-ink-2 hover:bg-surface-2"
+              title="Save this draft as a snapshot for later comparison"
+            >
+              <Camera size={13} />
+              Snapshot
+            </button>
+          )}
+
           <button
             onClick={() => setShowDiagram((s) => !s)}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg
@@ -528,6 +637,23 @@ ${markdownToBasicHTML(content)}
           isLoading={complianceLoading}
           onClose={() => setShowCompliance(false)}
           onApplyFix={handleApplyFix}
+          customRuleCount={customRules.length}
+        />
+      )}
+
+      {showRules && (
+        <ComplianceRulesPanel
+          rules={customRules}
+          onChange={setCustomRules}
+          onClose={() => setShowRules(false)}
+        />
+      )}
+
+      {showDiff && versionOptions.length > 0 && (
+        <VersionDiffPanel
+          currentContent={content}
+          versions={versionOptions}
+          onClose={() => setShowDiff(false)}
         />
       )}
     </div>

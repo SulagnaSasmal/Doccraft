@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { validateTerminology } from "@/lib/validateTerminology";
 import type { GlossaryData } from "@/lib/validateTerminology";
+import { sanitizeComplianceRules, type CustomComplianceRule } from "@/lib/complianceRules";
 
 export const runtime = 'edge';
 export const maxDuration = 30;
@@ -10,7 +11,7 @@ const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
 export interface ComplianceIssue {
   id: string;
-  category: "terminology" | "voice" | "structure" | "style";
+  category: "terminology" | "voice" | "structure" | "style" | "custom";
   severity: "error" | "warning" | "suggestion";
   rule: string;
   problematic_text?: string;
@@ -23,7 +24,15 @@ export interface ComplianceIssue {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { document, glossaryData }: { document: string; glossaryData?: GlossaryData } = body;
+    const {
+      document,
+      glossaryData,
+      customRules,
+    }: {
+      document: string;
+      glossaryData?: GlossaryData;
+      customRules?: CustomComplianceRule[];
+    } = body;
 
     if (!document?.trim()) {
       return NextResponse.json({ error: "No document provided" }, { status: 400 });
@@ -52,6 +61,9 @@ export async function POST(req: NextRequest) {
       replacement: t.suggestion ?? undefined,
     }));
 
+    const normalizedCustomRules = sanitizeComplianceRules(customRules);
+    const customRuleIssues = buildCustomRuleIssues(document, normalizedCustomRules);
+
     // ── 2. AI-detected structural / voice / style issues ────────────────────
     const systemPrompt = `You are an MSTP (Microsoft Style Guide) compliance checker.
 
@@ -64,11 +76,12 @@ Check for:
 - STRUCTURE: headings that are NOT in sentence case (only first word and proper nouns capitalised)
 - STYLE: paragraphs longer than 4 sentences
 - STYLE: informal or overly casual phrases inconsistent with professional docs
+${normalizedCustomRules.length > 0 ? `- CUSTOM: Apply these additional governance rules exactly as written:\n${normalizedCustomRules.map((rule) => `  - ${rule.name} [${rule.severity.toUpperCase()}]: ${rule.instruction}`).join("\n")}` : ""}
 
 Each issue object must have exactly these fields:
 {
   "id": "ai-N",
-  "category": "voice" | "structure" | "style",
+  "category": "voice" | "structure" | "style" | "custom",
   "severity": "error" | "warning" | "suggestion",
   "rule": "<short rule name>",
   "problematic_text": "<the exact excerpt from the document, max 120 chars>",
@@ -97,7 +110,7 @@ Limit to the 15 most important issues.`;
       // If parsing fails, return only terminology results
     }
 
-    const issues: ComplianceIssue[] = [...terminologyResults, ...aiIssues];
+    const issues: ComplianceIssue[] = [...terminologyResults, ...customRuleIssues, ...aiIssues];
 
     return NextResponse.json({ issues });
   } catch (err: any) {
@@ -107,4 +120,32 @@ Limit to the 15 most important issues.`;
       { status: 500 }
     );
   }
+}
+
+function buildCustomRuleIssues(document: string, rules: CustomComplianceRule[]): ComplianceIssue[] {
+  const issues: ComplianceIssue[] = [];
+
+  for (const rule of rules) {
+    const uniqueTerms = Array.from(new Set(rule.triggerTerms.map((term) => term.trim()).filter(Boolean)));
+
+    for (const term of uniqueTerms) {
+      const escaped = term.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      const match = document.match(new RegExp(`\\b${escaped}\\b`, "i"));
+      if (!match) continue;
+
+      issues.push({
+        id: `custom-${rule.id}-${issues.length}`,
+        category: "custom",
+        severity: rule.severity,
+        rule: rule.name,
+        problematic_text: match[0],
+        suggestion: rule.replacement
+          ? `${rule.instruction} Replace with "${rule.replacement}".`
+          : rule.instruction,
+        replacement: rule.replacement,
+      });
+    }
+  }
+
+  return issues;
 }

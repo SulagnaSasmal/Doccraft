@@ -1,81 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
-
-interface ParsedGitHubUrl {
-  owner: string;
-  repo: string;
-  branch?: string;
-  path?: string;
-  urlType: "repo" | "file" | "tree";
-}
-
-function parseGitHubUrl(url: string): ParsedGitHubUrl | null {
-  try {
-    const u = new URL(url.trim());
-    if (!["github.com", "www.github.com"].includes(u.hostname)) return null;
-
-    const parts = u.pathname.replace(/^\//, "").split("/").filter(Boolean);
-    if (parts.length < 2) return null;
-
-    const [owner, repo] = parts;
-
-    if (parts.length === 2) {
-      return { owner, repo, urlType: "repo" };
-    }
-
-    const urlType =
-      parts[2] === "blob" ? "file" : parts[2] === "tree" ? "tree" : "repo";
-    const branch = parts[3];
-    const path = parts.slice(4).join("/");
-
-    return { owner, repo, branch, path, urlType };
-  } catch {
-    return null;
-  }
-}
-
-function ghHeaders(): Record<string, string> {
-  const headers: Record<string, string> = {
-    Accept: "application/vnd.github.v3+json",
-    "User-Agent": "DocCraft-AI",
-  };
-  if (process.env.GITHUB_TOKEN) {
-    headers["Authorization"] = `Bearer ${process.env.GITHUB_TOKEN}`;
-  }
-  return headers;
-}
-
-async function ghFetch(url: string): Promise<Response> {
-  return fetch(url, { headers: ghHeaders() });
-}
-
-async function fetchDefaultBranch(owner: string, repo: string): Promise<string> {
-  const res = await ghFetch(`https://api.github.com/repos/${owner}/${repo}`);
-  if (!res.ok) return "main";
-  const data = await res.json();
-  return data.default_branch || "main";
-}
-
-async function fetchFile(
-  owner: string,
-  repo: string,
-  path: string,
-  branch?: string
-): Promise<string> {
-  const ref = branch || "HEAD";
-  const rawUrl = `https://raw.githubusercontent.com/${owner}/${repo}/${ref}/${path}`;
-  const res = await ghFetch(rawUrl);
-  if (!res.ok) throw new Error(`Could not fetch file: ${path}`);
-  return res.text();
-}
-
-async function fetchReadme(owner: string, repo: string): Promise<string> {
-  const res = await ghFetch(
-    `https://api.github.com/repos/${owner}/${repo}/readme`
-  );
-  if (!res.ok) throw new Error("No README found in this repository");
-  const data = await res.json();
-  return Buffer.from(data.content, "base64").toString("utf-8");
-}
+import {
+  fetchDefaultBranch,
+  fetchFile,
+  fetchReadme,
+  parseGitHubUrl,
+} from "@/lib/githubRepo";
 
 async function fetchTree(
   owner: string,
@@ -83,8 +12,17 @@ async function fetchTree(
   path: string,
   branch: string
 ): Promise<string> {
-  const res = await ghFetch(
-    `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`
+  const res = await fetch(
+    `https://api.github.com/repos/${owner}/${repo}/contents/${path}?ref=${branch}`,
+    {
+      headers: {
+        Accept: "application/vnd.github.v3+json",
+        "User-Agent": "DocCraft-AI",
+        ...(process.env.GITHUB_TOKEN
+          ? { Authorization: `Bearer ${process.env.GITHUB_TOKEN}` }
+          : {}),
+      },
+    }
   );
   if (!res.ok) throw new Error(`Could not fetch directory: ${path}`);
 
@@ -137,14 +75,14 @@ export async function POST(req: NextRequest) {
     let label = "";
 
     if (urlType === "file" && path) {
-      content = await fetchFile(owner, repo, path, branch);
+      content = await fetchFile(owner, repo, path, branch, process.env.GITHUB_TOKEN);
       label = path.split("/").pop() || path;
     } else if (urlType === "tree" && path) {
-      const defaultBranch = branch || (await fetchDefaultBranch(owner, repo));
+      const defaultBranch = branch || (await fetchDefaultBranch(owner, repo, process.env.GITHUB_TOKEN));
       content = await fetchTree(owner, repo, path, defaultBranch);
       label = `${repo}/${path}`;
     } else {
-      content = await fetchReadme(owner, repo);
+      content = await fetchReadme(owner, repo, process.env.GITHUB_TOKEN);
       label = `${owner}/${repo} README`;
     }
 

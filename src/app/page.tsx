@@ -11,7 +11,7 @@ import StatusBar from "@/components/StatusBar";
 import HistoryPanel from "@/components/HistoryPanel";
 import AuthModal from "@/components/AuthModal";
 import TeamPanel from "@/components/TeamPanel";
-import { useDocHistory } from "@/lib/useDocHistory";
+import { useDocHistory, type DocSession } from "@/lib/useDocHistory";
 import type { GlossaryData } from "@/lib/validateTerminology";
 import { supabase } from "@/lib/supabase";
 import { safeResJson } from "@/lib/safeResJson";
@@ -62,7 +62,10 @@ export default function Home() {
   const [glossaryData, setGlossaryData] = useState<GlossaryData | null>(null);
   const [questions, setQuestions] = useState<GapQuestion[]>([]);
   const [generatedDoc, setGeneratedDoc] = useState("");
+  const [baselineDoc, setBaselineDoc] = useState("");
+  const [streamedDoc, setStreamedDoc] = useState("");
   const [error, setError] = useState("");
+  const generationAbortRef = useRef<AbortController | null>(null);
 
   // History
   const { history, addSession, removeSession, clearAll } = useDocHistory();
@@ -217,9 +220,13 @@ export default function Home() {
   const handleGenerate = async (answeredQuestions: GapQuestion[]) => {
     setStage("generating");
     setError("");
+    setStreamedDoc("");
+    setGeneratedDoc("");
+    let partialDocument = "";
 
     try {
       const controller = new AbortController();
+      generationAbortRef.current = controller;
       const timeout = setTimeout(() => controller.abort(), 55000);
 
       const res = await fetch("/api/generate", {
@@ -231,34 +238,105 @@ export default function Home() {
           config,
           answers: answeredQuestions,
           contextText,
+          stream: true,
         }),
         signal: controller.signal,
       });
-      clearTimeout(timeout);
 
       if (!res.ok) {
+        clearTimeout(timeout);
         const errData = await safeResJson(res);
         throw new Error(errData.error || `Server returned ${res.status}. Please try again.`);
       }
 
-      const data = await safeResJson(res);
-      if (!data.document) throw new Error("No document returned. Please try again.");
-      setGeneratedDoc(data.document);
+      if (!res.body) {
+        clearTimeout(timeout);
+        throw new Error("The server did not return a stream.");
+      }
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let assembled = "";
+
+      const flushEvent = (rawEvent: string) => {
+        const lines = rawEvent.split("\n");
+        const eventName = lines.find((line) => line.startsWith("event:"))?.slice(6).trim() || "message";
+        const dataLine = lines.filter((line) => line.startsWith("data:")).map((line) => line.slice(5).trim()).join("\n");
+        if (!dataLine) return;
+
+        const payload = JSON.parse(dataLine);
+
+        if (eventName === "chunk" && payload.delta) {
+          assembled += payload.delta;
+          partialDocument = assembled;
+          setStreamedDoc(assembled);
+        }
+
+        if (eventName === "error") {
+          throw new Error(payload.error || "Streaming failed");
+        }
+      };
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const events = buffer.split("\n\n");
+        buffer = events.pop() || "";
+
+        for (const eventChunk of events) {
+          flushEvent(eventChunk);
+        }
+      }
+
+      if (buffer.trim()) {
+        flushEvent(buffer);
+      }
+
+      clearTimeout(timeout);
+
+      if (!assembled.trim()) {
+        throw new Error("No document returned. Please try again.");
+      }
+
+      setGeneratedDoc(assembled);
+      setBaselineDoc(assembled);
+      setStreamedDoc("");
       setStage("editing");
 
-      // Save to history
       addSession({
         config,
         inputSummary: uploadedContent.slice(0, 120).trim(),
-        generatedDoc: data.document,
+        generatedDoc: assembled,
+        kind: "generated",
+        label: "Initial draft",
       });
     } catch (err: any) {
       const msg = err.name === "AbortError"
-        ? "Request timed out — the server took too long. Please try again with shorter content."
+        ? partialDocument.trim()
+          ? "Generation stopped early. Review the partial draft and continue refining."
+          : "Request timed out — the server took too long. Please try again with shorter content."
         : err.message || "Something went wrong during generation.";
+
+      if (partialDocument.trim()) {
+        setGeneratedDoc(partialDocument);
+        setBaselineDoc(partialDocument);
+        setStreamedDoc("");
+        setStage("editing");
+      } else {
+        setStage("questions");
+      }
+
       setError(msg);
-      setStage("questions");
+    } finally {
+      generationAbortRef.current = null;
     }
+  };
+
+  const handleCancelGeneration = () => {
+    generationAbortRef.current?.abort();
   };
 
   const handleRefine = async (
@@ -282,6 +360,7 @@ export default function Home() {
   };
 
   const handleStartOver = () => {
+    generationAbortRef.current?.abort();
     setStage("upload");
     setUploadedContent("");
     setFileNames([]);
@@ -289,15 +368,30 @@ export default function Home() {
     setGlossaryData(null);
     setQuestions([]);
     setGeneratedDoc("");
+    setBaselineDoc("");
+    setStreamedDoc("");
     setError("");
     setRecommendation(null);
     setRecDismissed(false);
   };
 
-  const handleRestoreSession = (session: import("@/lib/useDocHistory").DocSession) => {
+  const handleRestoreSession = (session: DocSession) => {
     setConfig(session.config);
     setGeneratedDoc(session.generatedDoc);
+    setBaselineDoc(session.generatedDoc);
     setStage("editing");
+  };
+
+  const handleSaveVersion = () => {
+    if (!generatedDoc.trim()) return;
+
+    addSession({
+      config,
+      inputSummary: generatedDoc.slice(0, 120).trim(),
+      generatedDoc,
+      kind: "snapshot",
+      label: `Snapshot ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`,
+    });
   };
 
   const showRecommendation =
@@ -430,7 +524,22 @@ export default function Home() {
           <div className="flex flex-col items-center justify-center py-24 animate-fade-in-up">
             <div className="w-12 h-12 border-3 border-brand-200 border-t-brand-600 rounded-full animate-spin mb-5" />
             <p className="text-ink-2 font-medium text-lg">Generating your documentation…</p>
-            <p className="text-ink-3 text-sm mt-1">This may take 15–30 seconds</p>
+            <p className="text-ink-3 text-sm mt-1">Streaming tokens live so you can see progress immediately.</p>
+            <button
+              onClick={handleCancelGeneration}
+              className="mt-4 px-4 py-2 rounded-lg border border-surface-3 text-sm font-medium text-ink-2 hover:bg-surface-2 transition-colors"
+            >
+              Cancel
+            </button>
+
+            <div className="mt-8 w-full max-w-4xl rounded-2xl border border-surface-3 bg-white shadow-card overflow-hidden">
+              <div className="px-4 py-2 border-b border-surface-2 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-3 bg-surface-1">
+                Live Draft
+              </div>
+              <pre className="max-h-[420px] overflow-auto px-5 py-4 text-sm leading-7 text-ink-1 whitespace-pre-wrap break-words font-mono">
+                {streamedDoc || "Waiting for the first tokens..."}
+              </pre>
+            </div>
           </div>
         )}
 
@@ -441,7 +550,10 @@ export default function Home() {
             onRefine={handleRefine}
             config={config}
             glossaryData={glossaryData}
+            history={history}
+            baselineContent={baselineDoc}
             onSaveToCloud={handleSaveToCloud}
+            onSaveVersion={handleSaveVersion}
             cloudSaving={cloudSaving}
             cloudSaved={cloudSaved}
             isLoggedIn={!!user}

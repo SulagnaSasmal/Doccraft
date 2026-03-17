@@ -103,8 +103,13 @@ export default function HistoryPanel({
               {/* Doc type badge */}
               <div className="flex items-center gap-2">
                 <span className="text-[0.65rem] font-semibold uppercase tracking-wider text-brand-600 bg-brand-100 px-2 py-0.5 rounded-full">
-                  {DOC_TYPE_LABELS[session.config.docType] || session.config.docType}
+                  {session.label || DOC_TYPE_LABELS[session.config.docType] || session.config.docType}
                 </span>
+                {session.kind === "snapshot" && (
+                  <span className="text-[0.6rem] font-semibold uppercase tracking-wider text-ink-3 bg-surface-2 px-2 py-0.5 rounded-full">
+                    Snapshot
+                  </span>
+                )}
                 <span className="text-[0.65rem] text-ink-4">{timeAgo(session.timestamp)}</span>
               </div>
 

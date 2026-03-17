@@ -18,6 +18,7 @@ Transform raw content into polished, structured documentation using AI. Feed it 
 ### Generation
 - **Smart gap analysis** — AI identifies missing information, ambiguities, and assumptions before writing
 - **Interactive Q&A loop** — Answer questions to improve output quality, skip what you don't know
+- **Token streaming output** — Watch documentation arrive live while the model generates it
 - **5 document templates** — User Guide, Quick Start, API Reference, Troubleshooting, Release Notes
 - **Audience-aware** — Adjusts language for technical, non-technical, or mixed audiences
 - **Format recommendation** — AI analyses your uploaded content and suggests the best doc type before you configure
@@ -25,14 +26,21 @@ Transform raw content into polished, structured documentation using AI. Feed it 
 ### Editing
 - **Inline AI editing** — Select any text → Simplify, Expand, Add Example, Make Concise, Troubleshoot
 - **Live split editor** — Edit Markdown on the left, see a styled preview on the right (Edit / Split / Preview modes)
+- **Version diffing** — Compare the current draft against the original output or saved snapshots side-by-side
+- **Saved snapshots** — Capture revision checkpoints before major edits or publish actions
 - **Mermaid diagram generator** — Generate a flowchart, sequence diagram, or state diagram from your document with one click; insert directly into the doc
 
 ### MSTP Compliance (auto-runs after generation)
 - **Automatic compliance check** — Runs the moment your document is generated, no button press needed
 - **Microsoft Style Guide rules** — Checks for forbidden words, passive voice, Title Case headings, non-imperative procedure steps, incorrect callout formatting, and terminology drift
+- **Custom compliance profiles** — Add company-specific rules, trigger terms, and replacement hints on top of MSTP
 - **One-click Fix** — Apply a fix instantly per issue: instant string replace for terminology, AI-assisted rewrite for voice/structure/style issues
 - **Severity levels** — Errors, Warnings, and Suggestions — sorted and color-coded
 - **Dismiss per issue or all** — Full control over what you act on
+
+### Automation
+- **CI/CD webhook endpoint** — Trigger doc generation from repo pushes, release events, or manual pipelines
+- **Auto-publish option** — Webhook jobs can open a GitHub PR or commit generated docs directly back to a repo
 
 ### Export
 - **HTML export** — Styled, standalone HTML file ready to publish
@@ -161,9 +169,74 @@ Upload a `.json` file matching this schema to enforce terminology automatically:
    - `NEXT_PUBLIC_SUPABASE_URL` — required for auth and cloud save
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — required for auth and cloud save
    - `GITHUB_TOKEN` — optional, for GitHub repo imports
+        - `DOCCRAFT_WEBHOOK_SECRET` — required if you want CI/CD or GitHub Actions to call the webhook endpoint
 4. Deploy
 
 Vercel auto-deploys on every push to `main`.
+
+### CI/CD webhook payload
+
+POST to `/api/webhooks/ci` with either the `x-doccraft-secret` header or a `Bearer` token matching `DOCCRAFT_WEBHOOK_SECRET`.
+
+```json
+{
+        "repositoryUrl": "https://github.com/owner/repo",
+        "branch": "main",
+        "changedFiles": ["src/api/payments.ts", "README.md"],
+        "docType": "release-notes",
+        "audience": "mixed",
+        "tone": "instructional",
+        "customInstructions": "Generate concise release notes for customer-facing docs.",
+        "customRules": [
+                {
+                        "id": "ga-only",
+                        "name": "No beta language",
+                        "instruction": "Do not describe shipped features as beta or experimental.",
+                        "severity": "error",
+                        "triggerTerms": ["beta", "experimental"],
+                        "replacement": "general availability"
+                }
+        ],
+        "publish": {
+                "enabled": true,
+                "repoUrl": "https://github.com/owner/repo",
+                "filePath": "docs/releases/latest.md",
+                "action": "pr"
+        }
+}
+```
+
+### GitHub Actions example
+
+```yaml
+name: Auto Docs
+
+on:
+        push:
+                branches: [main]
+
+jobs:
+        doccraft:
+                runs-on: ubuntu-latest
+                steps:
+                        - name: Trigger DocCraft webhook
+                                run: |
+                                        curl -X POST "https://your-app.vercel.app/api/webhooks/ci" \
+                                                -H "Content-Type: application/json" \
+                                                -H "x-doccraft-secret: ${{ secrets.DOCCRAFT_WEBHOOK_SECRET }}" \
+                                                -d '{
+                                                        "repository": {"html_url": "https://github.com/${{ github.repository }}"},
+                                                        "ref": "${{ github.ref }}",
+                                                        "changedFiles": ["README.md"],
+                                                        "docType": "release-notes",
+                                                        "publish": {
+                                                                "enabled": true,
+                                                                "repoUrl": "https://github.com/${{ github.repository }}",
+                                                                "filePath": "docs/releases/latest.md",
+                                                                "action": "pr"
+                                                        }
+                                                }'
+```
 
 ---
 
@@ -190,11 +263,11 @@ Vercel auto-deploys on every push to `main`.
 - [x] DALL-E infographic generation from document content
 
 ### Phase 4 — In Progress 🚧
-- [ ] Streaming responses — stream AI output token-by-token for instant feedback
+- [x] Streaming responses — stream AI output token-by-token for instant feedback
 - [ ] Multi-language output — generate docs in Spanish, French, German, Japanese
-- [ ] Version diffing — compare two document versions side-by-side
-- [ ] Custom compliance rule sets — upload your own style rules beyond MSTP
-- [ ] Webhook / CI integration — auto-generate docs on repo push via GitHub Actions
+- [x] Version diffing — compare two document versions side-by-side
+- [x] Custom compliance rule sets — upload your own style rules beyond MSTP
+- [x] Webhook / CI integration — auto-generate docs on repo push via GitHub Actions
 
 ### Phase 5 — Marketability & Growth 🚀
 - [ ] **Landing page** — marketing site with feature showcase, demo video, testimonials, and pricing

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import { buildGenerateMessages } from "@/lib/docGeneration";
 
 export const runtime = 'edge'; // 25s on Hobby, 30s on Pro (vs 10s for Node.js serverless on Hobby)
 export const maxDuration = 30;
@@ -66,7 +67,7 @@ const TONE_INSTRUCTIONS: Record<string, string> = {
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    const { action, content, config, answers, contextText } = body;
+    const { action, content, config, answers, contextText, stream } = body;
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
@@ -78,6 +79,9 @@ export async function POST(req: NextRequest) {
     if (action === "analyze") {
       return handleAnalyze(content, config, contextText);
     } else if (action === "generate") {
+      if (stream) {
+        return handleGenerateStream(content, config, answers, contextText);
+      }
       return handleGenerate(content, config, answers, contextText);
     }
 
@@ -160,68 +164,53 @@ IMPORTANT: Return ONLY the JSON array, no markdown fences, no explanation. Examp
 }
 
 async function handleGenerate(content: string, config: any, answers: any[], contextText?: string) {
-  const template = TEMPLATES[config.docType] || TEMPLATES["user-guide"];
-  const audienceNote = AUDIENCE_INSTRUCTIONS[config.audience] || "";
-  const toneNote = TONE_INSTRUCTIONS[config.tone] || "";
-
-  const answeredContext = answers
-    .filter((a: any) => !a.skipped && a.answer.trim())
-    .map((a: any) => `Q: ${a.question}\nA: ${a.answer}`)
-    .join("\n\n");
-
-  const skippedContext = answers
-    .filter((a: any) => a.skipped)
-    .map((a: any) => `- ${a.question} [SKIPPED — make reasonable assumption and mark with ⚠️]`)
-    .join("\n");
-
-  const systemPrompt = `You are a senior technical writer creating production-ready documentation.
-
-DOCUMENT TYPE: ${config.docType}
-TEMPLATE STRUCTURE:
-${template}
-
-AUDIENCE: ${config.audience}
-${audienceNote}
-
-TONE: ${config.tone}
-${toneNote}
-
-RULES:
-1. Follow the template structure exactly
-2. Write from the user's perspective — what do THEY need to do?
-3. Use consistent formatting: headings, numbered steps, callout boxes
-4. Mark any assumed information with ⚠️ emoji so reviewers can verify
-5. Include practical examples where helpful
-6. Keep paragraphs short (3-4 sentences max)
-7. For steps, use the format: "Step N: [Action]" with a brief explanation below
-8. Add a "Note:" or "Tip:" callout where useful
-9. Output in clean Markdown format
-
-${config.customInstructions ? `ADDITIONAL INSTRUCTIONS: ${config.customInstructions}` : ""}`;
-
-  const userMessage = [
-    contextText?.trim()
-      ? `CONTEXT DOCUMENTS (existing docs, style guide, terminology — write consistently with these):\n${contextText.slice(0, 3000)}\n\n---`
-      : null,
-    `SOURCE MATERIAL:\n${content.slice(0, 10000)}`,
-    answeredContext ? `\nCLARIFICATIONS FROM SME:\n${answeredContext}` : null,
-    skippedContext ? `\nUNANSWERED QUESTIONS (make reasonable assumptions):\n${skippedContext}` : null,
-    "\nPlease generate the complete documentation now.",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
-
-  const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
-    messages: [
-      { role: "system", content: systemPrompt },
-      { role: "user", content: userMessage },
-    ],
-    max_tokens: 3000,
-    temperature: 0.4,
-  });
+  const response = await openai.chat.completions.create(
+    buildGenerateMessages(content, config, answers, contextText)
+  );
 
   const document = response.choices[0]?.message?.content || "# Error\nFailed to generate documentation.";
 
   return NextResponse.json({ document });
+}
+
+async function handleGenerateStream(content: string, config: any, answers: any[], contextText?: string) {
+  const completion = await openai.chat.completions.create({
+    ...buildGenerateMessages(content, config, answers, contextText),
+    stream: true,
+  });
+
+  const encoder = new TextEncoder();
+
+  const stream = new ReadableStream({
+    async start(controller) {
+      try {
+        for await (const chunk of completion) {
+          const delta = chunk.choices[0]?.delta?.content || "";
+          if (!delta) continue;
+
+          controller.enqueue(
+            encoder.encode(`event: chunk\ndata: ${JSON.stringify({ delta })}\n\n`)
+          );
+        }
+
+        controller.enqueue(encoder.encode('event: done\ndata: {"ok":true}\n\n'));
+      } catch (error: any) {
+        controller.enqueue(
+          encoder.encode(
+            `event: error\ndata: ${JSON.stringify({ error: error?.message || "Streaming failed" })}\n\n`
+          )
+        );
+      } finally {
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "text/event-stream",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+    },
+  });
 }

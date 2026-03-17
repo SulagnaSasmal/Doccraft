@@ -9,6 +9,8 @@ export interface DocSession {
   config: DocConfig;
   inputSummary: string; // first 100 chars of source content
   generatedDoc: string;
+  kind?: "generated" | "snapshot";
+  label?: string;
 }
 
 const STORAGE_KEY = "doccraft_history";

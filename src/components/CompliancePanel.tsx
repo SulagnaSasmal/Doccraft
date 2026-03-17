@@ -46,6 +46,7 @@ const CATEGORY_LABEL: Record<ComplianceIssue["category"], string> = {
   voice: "Voice",
   structure: "Structure",
   style: "Style",
+  custom: "Custom",
 };
 
 // ─── Component ────────────────────────────────────────────────────────────────
@@ -55,11 +56,13 @@ export default function CompliancePanel({
   isLoading,
   onClose,
   onApplyFix,
+  customRuleCount = 0,
 }: {
   issues: ComplianceIssue[];
   isLoading: boolean;
   onClose: () => void;
   onApplyFix: (issue: ComplianceIssue) => Promise<void>;
+  customRuleCount?: number;
 }) {
   const [dismissed, setDismissed] = useState<Set<string>>(new Set());
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
@@ -104,8 +107,13 @@ export default function CompliancePanel({
         <div className="flex items-center gap-2.5">
           <ShieldCheck size={16} className="text-brand-500 shrink-0" />
           <span className="font-display font-semibold text-ink-0 text-[0.95rem]">
-            MSTP Compliance
+            Compliance Review
           </span>
+          {customRuleCount > 0 && (
+            <span className="px-2 py-0.5 rounded-full text-[0.65rem] font-semibold bg-brand-50 text-brand-700 border border-brand-200">
+              MSTP + {customRuleCount} custom rule{customRuleCount === 1 ? "" : "s"}
+            </span>
+          )}
 
           {/* Summary chips — shown after load */}
           {!isLoading && (
@@ -161,7 +169,7 @@ export default function CompliancePanel({
             </div>
             <p className="font-medium text-ink-1 text-sm">No compliance issues found</p>
             <p className="text-xs text-ink-3">
-              Your document follows MSTP style guidelines.
+              Your document follows the active MSTP and custom rule checks.
             </p>
           </div>
         )}
