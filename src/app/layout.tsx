@@ -4,11 +4,6 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "DocCraft AI — Intelligent Documentation Generator",
   description: "Transform raw content into polished, structured documentation using AI",
-  icons: {
-    icon: "/icon.svg",
-    shortcut: "/icon.svg",
-    apple: "/icon.svg",
-  },
 };
 
 export default function RootLayout({
