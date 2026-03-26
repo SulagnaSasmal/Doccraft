@@ -108,13 +108,15 @@ Return your analysis as a JSON array of questions. Each question should have:
 - "id": a unique string (e.g., "q1", "q2")
 - "question": the specific question you need answered
 - "category": one of "missing" (information not provided), "ambiguous" (information is unclear), or "assumption" (you're making an assumption that needs confirmation)
+- "priority": one of "critical" (absolutely required for accurate documentation — mark as "critical" if getting this wrong could mislead users) or "optional" (improves quality but the AI can make a reasonable assumption)
 
 Aim for 5-12 focused, specific questions. Don't ask generic questions — ask things that would genuinely block a technical writer.
+Mark approximately 30-50% as "critical" — only truly essential questions.
 
 ${config.customInstructions ? `Additional instructions: ${config.customInstructions}` : ""}
 
 IMPORTANT: Return ONLY the JSON array, no markdown fences, no explanation. Example:
-[{"id":"q1","question":"What happens when...","category":"missing"}]`;
+[{"id":"q1","question":"What happens when...","category":"missing","priority":"critical"}]`;
 
   const response = await openai.chat.completions.create({
     model: "gpt-4o",
@@ -146,6 +148,7 @@ IMPORTANT: Return ONLY the JSON array, no markdown fences, no explanation. Examp
     ...q,
     answer: "",
     skipped: false,
+    priority: q.priority || "optional",
   }));
 
   return NextResponse.json({ questions: formatted });

@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings2 } from "lucide-react";
+import { Settings2, FileType2, Users, Volume2 } from "lucide-react";
 import type { DocConfig } from "@/app/page";
 
 const DOC_TYPES = [
@@ -37,20 +37,23 @@ export default function ConfigPanel({
     <div className="bg-white rounded-2xl shadow-card border border-surface-3 overflow-hidden">
       <div className="px-5 py-4 border-b border-surface-2 flex items-center gap-2">
         <Settings2 size={16} className="text-brand-500" />
-        <h2 className="font-display font-semibold text-ink-0 text-[0.95rem]">Configuration</h2>
+        <h2 className="font-display font-bold text-ink-0 text-base">Configuration</h2>
       </div>
 
-      <div className="p-5 space-y-4">
-        {/* Document Type */}
-        <div>
-          <label className="block text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
-            Document Type
-          </label>
+      <div className="p-5 space-y-5">
+        {/* Document Type Section */}
+        <div className="bg-surface-1 rounded-xl p-4 border border-surface-2">
+          <div className="flex items-center gap-2 mb-3">
+            <FileType2 size={14} className="text-brand-500" />
+            <label className="text-xs font-bold text-ink-0 uppercase tracking-wider">
+              Document Type
+            </label>
+          </div>
           <select
             value={config.docType}
             onChange={(e) => update("docType", e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-surface-3 bg-surface-1 text-sm text-ink-0
-                       focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 transition-all"
+            className="w-full px-3 py-2.5 rounded-lg border border-surface-3 bg-white text-sm text-ink-0
+                       focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 transition-all font-medium"
           >
             {DOC_TYPES.map((t) => (
               <option key={t.value} value={t.value}>
@@ -58,25 +61,28 @@ export default function ConfigPanel({
               </option>
             ))}
           </select>
-          <p className="text-[0.7rem] text-ink-3 mt-1">
+          <p className="text-[0.7rem] text-ink-3 mt-1.5">
             {DOC_TYPES.find((t) => t.value === config.docType)?.desc}
           </p>
         </div>
 
-        {/* Audience */}
-        <div>
-          <label className="block text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
-            Audience
-          </label>
-          <div className="grid grid-cols-3 gap-1.5">
+        {/* Audience Section */}
+        <div className="bg-surface-1 rounded-xl p-4 border border-surface-2">
+          <div className="flex items-center gap-2 mb-3">
+            <Users size={14} className="text-brand-500" />
+            <label className="text-xs font-bold text-ink-0 uppercase tracking-wider">
+              Audience
+            </label>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
             {AUDIENCES.map((a) => (
               <button
                 key={a.value}
                 onClick={() => update("audience", a.value)}
-                className={`px-2 py-2 rounded-lg text-xs font-medium text-center transition-all ${
+                className={`px-2 py-2.5 rounded-lg text-xs font-semibold text-center transition-all ${
                   config.audience === a.value
-                    ? "bg-brand-100 text-brand-700 ring-1 ring-brand-200"
-                    : "bg-surface-1 text-ink-2 hover:bg-surface-2 border border-surface-3"
+                    ? "bg-brand-700 text-white shadow-sm"
+                    : "bg-white text-ink-2 hover:bg-surface-2 border border-surface-3"
                 }`}
               >
                 {a.label}
@@ -85,20 +91,23 @@ export default function ConfigPanel({
           </div>
         </div>
 
-        {/* Tone */}
-        <div>
-          <label className="block text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
-            Tone
-          </label>
-          <div className="grid grid-cols-3 gap-1.5">
+        {/* Tone Section */}
+        <div className="bg-surface-1 rounded-xl p-4 border border-surface-2">
+          <div className="flex items-center gap-2 mb-3">
+            <Volume2 size={14} className="text-brand-500" />
+            <label className="text-xs font-bold text-ink-0 uppercase tracking-wider">
+              Tone
+            </label>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
             {TONES.map((t) => (
               <button
                 key={t.value}
                 onClick={() => update("tone", t.value)}
-                className={`px-2 py-2 rounded-lg text-xs font-medium text-center transition-all ${
+                className={`px-2 py-2.5 rounded-lg text-xs font-semibold text-center transition-all ${
                   config.tone === t.value
-                    ? "bg-brand-100 text-brand-700 ring-1 ring-brand-200"
-                    : "bg-surface-1 text-ink-2 hover:bg-surface-2 border border-surface-3"
+                    ? "bg-brand-700 text-white shadow-sm"
+                    : "bg-white text-ink-2 hover:bg-surface-2 border border-surface-3"
                 }`}
               >
                 {t.label}
@@ -109,7 +118,7 @@ export default function ConfigPanel({
 
         {/* Custom Instructions */}
         <div>
-          <label className="block text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
+          <label className="block text-xs font-bold text-ink-0 mb-2 uppercase tracking-wider">
             Custom Instructions
             <span className="font-normal normal-case text-ink-3 ml-1">(optional)</span>
           </label>
