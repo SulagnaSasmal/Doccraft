@@ -16,7 +16,7 @@ import { useDocHistory, type DocSession } from "@/lib/useDocHistory";
 import type { GlossaryData } from "@/lib/validateTerminology";
 import { supabase } from "@/lib/supabase";
 import { safeResJson } from "@/lib/safeResJson";
-import { Sparkles, X, Cloud } from "lucide-react";
+import { Sparkles, X, Cloud, Zap, Shield, Clock } from "lucide-react";
 
 export type AppStage = "upload" | "analyzing" | "questions" | "generating" | "editing";
 
@@ -33,6 +33,7 @@ export interface GapQuestion {
   answer: string;
   skipped: boolean;
   category: "missing" | "ambiguous" | "assumption";
+  priority?: "critical" | "optional";
 }
 
 interface Recommendation {
@@ -423,6 +424,24 @@ export default function Home() {
 
         {(stage === "upload" || stage === "analyzing") && (
           <>
+            {/* Hero section — only on first upload view */}
+            {stage === "upload" && !uploadedContent.trim() && (
+              <div className="text-center mb-10 animate-fade-in-up">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-50 text-brand-700 rounded-full text-xs font-semibold mb-4 border border-brand-200/60">
+                  <Sparkles size={12} />
+                  Powered by GPT-4o
+                </div>
+                <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-ink-0 tracking-tight leading-tight">
+                  Turn rough notes into<br />
+                  <span className="text-brand-600">polished documentation</span>
+                </h2>
+                <p className="mt-3 text-ink-2 text-base max-w-xl mx-auto leading-relaxed">
+                  Upload your source material, configure the output, and let AI craft
+                  publication-ready docs — with smart gap analysis built in.
+                </p>
+              </div>
+            )}
+
             {/* Auth nudge — show once on upload stage when not signed in */}
             {!user && stage === "upload" && (
               <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-brand-50 to-indigo-50 border border-brand-200/60 rounded-xl animate-fade-in-up">
@@ -512,6 +531,27 @@ export default function Home() {
               onRemove={removeSession}
               onClearAll={clearAll}
             />
+
+            {/* Value banner */}
+            {stage === "upload" && !uploadedContent.trim() && (
+              <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-in-up">
+                {[
+                  { icon: Zap, title: "AI Gap Analysis", desc: "Identifies missing info before generation" },
+                  { icon: Shield, title: "MSTP Compliance", desc: "Built-in style & terminology checks" },
+                  { icon: Clock, title: "10× Faster", desc: "From raw notes to polished docs in minutes" },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-start gap-3 bg-surface-1 rounded-xl p-4 border border-surface-2">
+                    <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center shrink-0">
+                      <item.icon size={16} className="text-brand-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-ink-0">{item.title}</p>
+                      <p className="text-xs text-ink-3 mt-0.5">{item.desc}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </>
         )}
 
@@ -552,6 +592,7 @@ export default function Home() {
             onChange={setGeneratedDoc}
             onRefine={handleRefine}
             config={config}
+            docType={config.docType}
             glossaryData={glossaryData}
             history={history}
             baselineContent={baselineDoc}

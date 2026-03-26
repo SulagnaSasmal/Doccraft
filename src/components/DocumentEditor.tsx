@@ -24,7 +24,12 @@ import {
   GitCompare,
   ShieldPlus,
   Camera,
+  Sparkles,
+  Type,
+  ListOrdered,
+  Eraser,
 } from "lucide-react";
+import LintingPanel from "@/components/LintingPanel";
 import InfographicPanel from "@/components/InfographicPanel";
 import PublishPanel from "@/components/PublishPanel";
 import type { DocConfig } from "@/app/page";
@@ -56,6 +61,7 @@ export default function DocumentEditor({
   onChange,
   onRefine,
   config,
+  docType,
   glossaryData,
   history,
   baselineContent,
@@ -69,6 +75,7 @@ export default function DocumentEditor({
   onChange: (c: string) => void;
   onRefine: (text: string, action: string) => Promise<string>;
   config: DocConfig;
+  docType?: string;
   glossaryData?: GlossaryData | null;
   history: DocSession[];
   baselineContent?: string;
@@ -92,6 +99,8 @@ export default function DocumentEditor({
   const [showDiff, setShowDiff] = useState(false);
   const [showRules, setShowRules] = useState(false);
   const [customRules, setCustomRules] = useState<CustomComplianceRule[]>([]);
+  const [showLinting, setShowLinting] = useState(false);
+  const [inlineToolbar, setInlineToolbar] = useState<{ top: number; left: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
@@ -164,12 +173,62 @@ export default function DocumentEditor({
     }
   };
 
-  const buildHTMLExport = () => `<!DOCTYPE html>
+  /* ── Inline floating toolbar on text selection ───────────────────────── */
+  const handleEditorMouseUp = () => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    if (start === end) { setInlineToolbar(null); return; }
+
+    const rect = el.getBoundingClientRect();
+    // Estimate position: line-based approximation
+    const textBefore = content.slice(0, end);
+    const lines = textBefore.split("\n");
+    const lineHeight = 22; // approximate
+    const top = rect.top + Math.min(lines.length * lineHeight, rect.height - 40) - 48;
+    const left = rect.left + Math.min(200, rect.width / 2);
+    setInlineToolbar({ top, left });
+  };
+
+  const INLINE_ACTIONS = [
+    { key: "simplify", label: "Simplify", icon: Type },
+    { key: "expand", label: "Expand", icon: ListOrdered },
+    { key: "concise", label: "Concise", icon: Eraser },
+    { key: "example", label: "Example", icon: Sparkles },
+  ];
+
+  const buildHTMLExport = () => {
+    // Extract headings for Table of Contents
+    const headings = (content.match(/^#{1,3} .+/gm) || []).map((h) => {
+      const level = (h.match(/^#+/) || [""])[0].length;
+      const text = h.replace(/^#+\s*/, "");
+      const id = text.toLowerCase().replace(/[^a-z0-9]+/g, "-");
+      return { level, text, id };
+    });
+    const tocHTML = headings.length > 2
+      ? `<nav class="toc"><h2>Table of Contents</h2><ul>${headings
+          .map((h) => `<li class="toc-h${h.level}"><a href="#${h.id}">${h.text}</a></li>`)
+          .join("\n")}</ul></nav>`
+      : "";
+
+    // Inject IDs into headings in the converted HTML
+    let bodyHTML = markdownToBasicHTML(content);
+    headings.forEach((h) => {
+      bodyHTML = bodyHTML.replace(
+        `<h${h.level}>${h.text}</h${h.level}>`,
+        `<h${h.level} id="${h.id}">${h.text}</h${h.level}>`
+      );
+    });
+
+    const docLabel = docType || config.docType || "Documentation";
+
+    return `<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Documentation</title>
+<title>${docLabel} — DocCraft AI</title>
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
@@ -177,6 +236,23 @@ export default function DocumentEditor({
     color: #1a1a2e; line-height: 1.7; max-width: 800px;
     margin: 0 auto; padding: 3rem 2rem; background: #ffffff;
   }
+  /* Header bar */
+  .doc-header { display: flex; justify-content: space-between; align-items: center;
+                padding-bottom: 1rem; margin-bottom: 2rem; border-bottom: 2px solid #e8ecf4; }
+  .doc-header h1 { font-size: 1.5rem; font-weight: 700; color: #0f1729; }
+  .doc-header .badge { font-size: 0.7rem; padding: 0.25rem 0.6rem; background: #4c6ef5;
+                       color: white; border-radius: 999px; font-weight: 600; }
+  /* ToC */
+  .toc { background: #f8f9fc; border: 1px solid #e8ecf4; border-radius: 8px;
+         padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+  .toc h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em;
+            color: #8494b2; margin-bottom: 0.75rem; }
+  .toc ul { list-style: none; }
+  .toc li { margin-bottom: 0.35rem; }
+  .toc a { text-decoration: none; color: #4c6ef5; font-size: 0.9rem; }
+  .toc a:hover { text-decoration: underline; }
+  .toc .toc-h3 { padding-left: 1.2rem; }
+  /* Content */
   h1 { font-size: 2rem; font-weight: 700; margin: 2rem 0 1rem; color: #0f1729; }
   h2 { font-size: 1.5rem; font-weight: 600; margin: 1.75rem 0 0.75rem; color: #0f1729;
        padding-bottom: 0.5rem; border-bottom: 2px solid #e8ecf4; }
@@ -196,15 +272,26 @@ export default function DocumentEditor({
   th, td { border: 1px solid #e8ecf4; padding: 0.5rem 0.75rem; text-align: left; }
   th { background: #f8f9fc; font-weight: 600; }
   .footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid #e8ecf4;
-            font-size: 0.8rem; color: #8494b2; }
-  @media print { .footer { display: none; } }
+            font-size: 0.8rem; color: #8494b2; text-align: center; }
+  @media print {
+    body { padding: 1rem; }
+    .toc { break-after: page; }
+    .doc-header .badge { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    a { color: inherit; text-decoration: none; }
+  }
 </style>
 </head>
 <body>
-${markdownToBasicHTML(content)}
-<div class="footer">Generated by DocCraft AI • ${new Date().toLocaleDateString()}</div>
+<div class="doc-header">
+  <h1>${docLabel}</h1>
+  <span class="badge">Generated by DocCraft AI</span>
+</div>
+${tocHTML}
+${bodyHTML}
+<div class="footer">Generated by DocCraft AI on ${new Date().toLocaleDateString()} • ${new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
 </body>
 </html>`;
+  };
 
   const exportHTML = () => downloadTextFile(buildHTMLExport(), "documentation.html", "text/html;charset=utf-8");
   const exportMarkdown = () => downloadTextFile(content, "documentation.md", "text/markdown");
@@ -435,6 +522,19 @@ ${markdownToBasicHTML(content)}
             )}
           </button>
 
+          <button
+            onClick={() => setShowLinting((s) => !s)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border ${
+              showLinting
+                ? "bg-brand-50 text-brand-700 border-brand-200"
+                : "text-ink-2 hover:bg-surface-2 border-surface-3"
+            }`}
+            title="Style guide linting"
+          >
+            <Sparkles size={13} />
+            Lint
+          </button>
+
           {onSaveVersion && (
             <button
               onClick={onSaveVersion}
@@ -595,10 +695,37 @@ ${markdownToBasicHTML(content)}
                 ref={textareaRef}
                 value={content}
                 onChange={(e) => onChange(e.target.value)}
+                onMouseUp={handleEditorMouseUp}
+                onKeyUp={handleEditorMouseUp}
+                onBlur={() => setTimeout(() => setInlineToolbar(null), 200)}
                 className="w-full h-full px-4 py-10 text-sm text-ink-1 font-mono leading-relaxed
                            focus:outline-none resize-none bg-transparent"
                 spellCheck={false}
               />
+
+              {/* Floating inline AI toolbar */}
+              {inlineToolbar && (
+                <div
+                  className="fixed z-50 flex items-center gap-1 bg-white border border-surface-3 shadow-lg rounded-lg px-1.5 py-1 animate-fade-in-up"
+                  style={{ top: inlineToolbar.top, left: inlineToolbar.left }}
+                >
+                  {INLINE_ACTIONS.map((a) => {
+                    const Icon = a.icon;
+                    return (
+                      <button
+                        key={a.key}
+                        onMouseDown={(e) => { e.preventDefault(); handleAIAction(a.key); setInlineToolbar(null); }}
+                        className="flex items-center gap-1 px-2 py-1 text-[0.65rem] font-medium text-ink-2
+                                   hover:text-brand-700 hover:bg-brand-50 rounded-md transition-colors"
+                        title={a.label}
+                      >
+                        <Icon size={11} />
+                        {a.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
 
@@ -654,6 +781,37 @@ ${markdownToBasicHTML(content)}
           currentContent={content}
           versions={versionOptions}
           onClose={() => setShowDiff(false)}
+        />
+      )}
+
+      {/* Style Guide Linting Panel */}
+      {showLinting && (
+        <LintingPanel
+          content={content}
+          docType={docType || config.docType || "user-guide"}
+          onHighlight={(offset, length) => {
+            const el = textareaRef.current;
+            if (!el) return;
+            el.focus();
+            el.setSelectionRange(offset, offset + length);
+          }}
+        />
+      )}
+
+      {/* Infographic Panel */}
+      {showInfographic && (
+        <InfographicPanel
+          content={content}
+          onClose={() => setShowInfographic(false)}
+        />
+      )}
+
+      {/* Publish Panel */}
+      {showPublish && (
+        <PublishPanel
+          content={content}
+          docTitle={docType || config.docType || "Documentation"}
+          onClose={() => setShowPublish(false)}
         />
       )}
     </div>

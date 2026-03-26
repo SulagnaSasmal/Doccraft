@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, RotateCcw, Users, LogOut, User, Cloud, HelpCircle, Webhook } from "lucide-react";
+import { FileText, RotateCcw, Users, LogOut, User, Cloud, HelpCircle, Webhook, Check } from "lucide-react";
 import type { AppStage } from "@/app/page";
 
 const STAGE_LABELS: Record<AppStage, string> = {
@@ -47,31 +47,41 @@ export default function Header({
           </div>
         </div>
 
-        {/* Progress Steps */}
+        {/* Progress Steps — numbered stepper */}
         <div className="hidden sm:flex items-center gap-1">
           {stages.map((s, i) => {
             const current = stages.indexOf(
               stage === "analyzing" ? "upload" : stage === "generating" ? "questions" : stage
             );
-            const isActive = i <= current;
+            const isDone = i < current;
             const isCurrent = i === current;
             return (
               <div key={s} className="flex items-center">
-                <div
-                  className={`px-3 py-1 rounded-full text-xs font-medium transition-all duration-300 ${
-                    isCurrent
-                      ? "bg-brand-100 text-brand-700 ring-1 ring-brand-200"
-                      : isActive
-                      ? "bg-accent-green/10 text-accent-green"
-                      : "bg-surface-2 text-ink-4"
-                  }`}
-                >
-                  {STAGE_LABELS[s]}
+                <div className="flex items-center gap-2">
+                  {/* Numbered circle or check */}
+                  <span
+                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[0.65rem] font-bold transition-all duration-300 ${
+                      isDone
+                        ? "bg-accent-green text-white"
+                        : isCurrent
+                        ? "bg-brand-700 text-white ring-2 ring-brand-200"
+                        : "bg-surface-2 text-ink-4"
+                    }`}
+                  >
+                    {isDone ? <Check size={12} strokeWidth={3} /> : i + 1}
+                  </span>
+                  <span
+                    className={`text-xs font-medium transition-colors ${
+                      isCurrent ? "text-brand-700" : isDone ? "text-accent-green" : "text-ink-4"
+                    }`}
+                  >
+                    {STAGE_LABELS[s]}
+                  </span>
                 </div>
                 {i < stages.length - 1 && (
                   <div
-                    className={`w-6 h-px mx-1 transition-colors ${
-                      isActive && i < current ? "bg-accent-green" : "bg-surface-3"
+                    className={`w-8 h-px mx-2 transition-colors ${
+                      isDone ? "bg-accent-green" : "bg-surface-3"
                     }`}
                   />
                 )}

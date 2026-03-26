@@ -1,6 +1,6 @@
 "use client";
 
-import { Settings2 } from "lucide-react";
+import { Settings2, FileType2, Users, Volume2 } from "lucide-react";
 import type { DocConfig } from "@/app/page";
 
 const DOC_TYPES = [
@@ -42,14 +42,15 @@ export default function ConfigPanel({
 
       <div className="p-5 space-y-4">
         {/* Document Type */}
-        <div>
-          <label className="block text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
+        <div className="bg-surface-1 rounded-xl p-4 border border-surface-2">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
+            <FileType2 size={13} className="text-brand-500" />
             Document Type
           </label>
           <select
             value={config.docType}
             onChange={(e) => update("docType", e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-surface-3 bg-surface-1 text-sm text-ink-0
+            className="w-full px-3 py-2 rounded-lg border border-surface-3 bg-white text-sm text-ink-0
                        focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 transition-all"
           >
             {DOC_TYPES.map((t) => (
@@ -64,8 +65,9 @@ export default function ConfigPanel({
         </div>
 
         {/* Audience */}
-        <div>
-          <label className="block text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
+        <div className="bg-surface-1 rounded-xl p-4 border border-surface-2">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
+            <Users size={13} className="text-brand-500" />
             Audience
           </label>
           <div className="grid grid-cols-3 gap-1.5">
@@ -75,8 +77,8 @@ export default function ConfigPanel({
                 onClick={() => update("audience", a.value)}
                 className={`px-2 py-2 rounded-lg text-xs font-medium text-center transition-all ${
                   config.audience === a.value
-                    ? "bg-brand-100 text-brand-700 ring-1 ring-brand-200"
-                    : "bg-surface-1 text-ink-2 hover:bg-surface-2 border border-surface-3"
+                    ? "bg-brand-700 text-white shadow-sm"
+                    : "bg-white text-ink-2 hover:bg-surface-2 border border-surface-3"
                 }`}
               >
                 {a.label}
@@ -86,8 +88,9 @@ export default function ConfigPanel({
         </div>
 
         {/* Tone */}
-        <div>
-          <label className="block text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
+        <div className="bg-surface-1 rounded-xl p-4 border border-surface-2">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
+            <Volume2 size={13} className="text-brand-500" />
             Tone
           </label>
           <div className="grid grid-cols-3 gap-1.5">
@@ -97,8 +100,8 @@ export default function ConfigPanel({
                 onClick={() => update("tone", t.value)}
                 className={`px-2 py-2 rounded-lg text-xs font-medium text-center transition-all ${
                   config.tone === t.value
-                    ? "bg-brand-100 text-brand-700 ring-1 ring-brand-200"
-                    : "bg-surface-1 text-ink-2 hover:bg-surface-2 border border-surface-3"
+                    ? "bg-brand-700 text-white shadow-sm"
+                    : "bg-white text-ink-2 hover:bg-surface-2 border border-surface-3"
                 }`}
               >
                 {t.label}
