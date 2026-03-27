@@ -37,7 +37,7 @@ export default function Header({
   const stages: AppStage[] = ["upload", "questions", "editing"];
 
   return (
-    <header className="bg-surface-0 border-b border-surface-3 sticky top-0 z-50 glass">
+    <header className="border-b border-surface-3 sticky top-0 z-50 glass">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-brand-700 rounded-lg flex items-center justify-center shadow-sm">
