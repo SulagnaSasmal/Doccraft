@@ -434,7 +434,7 @@ export default function Home() {
 
   return (
     <div
-      className="min-h-screen flex flex-col bg-slate-950"
+      className="min-h-screen flex flex-col bg-slate-950 bg-grid-slate animate-in-faded"
       style={{
         background: "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(37,99,235,0.12) 0%, transparent 70%), #020817",
       }}
@@ -488,7 +488,7 @@ export default function Home() {
         </div>
 
         {/* Center: Workspace */}
-        <main className="flex-1 flex flex-col overflow-hidden border-x border-slate-800/60">
+        <main className="flex-1 flex flex-col overflow-hidden border-x border-slate-800/60 custom-scrollbar">
 
           {(stage === "upload" || stage === "analyzing") && (
             <DocumentLibrary
@@ -569,12 +569,7 @@ export default function Home() {
 
         {/* Right: Insights panel */}
         <aside
-          className="w-[240px] shrink-0 flex flex-col overflow-hidden border-l border-slate-800/60"
-          style={{
-            background: "rgba(15,23,41,0.60)",
-            backdropFilter: "blur(12px)",
-            WebkitBackdropFilter: "blur(12px)",
-          }}
+          className="w-[240px] shrink-0 flex flex-col overflow-hidden border-l border-slate-800/60 glass-panel"
         >
           <div className="px-4 py-3.5 border-b border-slate-800/60">
             <h2 className="text-[0.78rem] font-semibold uppercase tracking-widest text-slate-400">
@@ -589,7 +584,7 @@ export default function Home() {
                 <Cloud size={13} className="text-blue-400 shrink-0 mt-0.5" />
                 <div>
                   <p className="text-[0.68rem] text-slate-300 leading-relaxed">
-                    <button onClick={() => setShowAuth(true)} className="text-blue-400 font-semibold hover:underline">
+                    <button type="button" onClick={() => setShowAuth(true)} className="text-blue-400 font-semibold hover:underline">
                       Sign in
                     </button>{" "}
                     to unlock cloud save, teams &amp; GitHub publishing.
