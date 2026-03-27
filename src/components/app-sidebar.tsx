@@ -1,65 +1,163 @@
 "use client";
 
 import {
+  FileText,
+  LayoutDashboard,
+  ShieldCheck,
+  FileCode,
+  Hammer,
+  Search,
+  Settings,
+  ChevronRight,
+  PlusCircle,
+  BookOpen,
+  HelpCircle,
+  Wrench,
+  Tag,
+  Workflow,
+  Layers,
+  ScanText,
+  Scissors,
+} from "lucide-react";
+
+import {
   Sidebar,
   SidebarContent,
   SidebarGroup,
   SidebarGroupContent,
   SidebarGroupLabel,
+  SidebarHeader,
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
-  SidebarHeader,
   SidebarFooter,
 } from "@/components/ui/sidebar";
-import {
-  FileText,
-  FolderOpen,
-  Shield,
-  BookOpen,
-  Layers,
-  Settings,
-  Zap,
-  LayoutDashboard,
-} from "lucide-react";
 
-const workspaceItems = [
-  { title: "Dashboard", icon: LayoutDashboard, href: "/" },
-  { title: "Document Generator", icon: Zap, href: "/" },
-  { title: "Document Library", icon: FolderOpen, href: "/" },
+// ── Real doccraft-help-center file structure ─────────────────────────────────
+const workspaces = [
+  {
+    title: "Getting Started",
+    url: "/workspace?file=getting-started.html",
+    icon: BookOpen,
+    badge: "Guide",
+    badgeColor: "text-blue-400",
+  },
+  {
+    title: "Workflow Guides",
+    url: "/workspace?file=workflows.html",
+    icon: Workflow,
+    badge: "Guide",
+    badgeColor: "text-blue-400",
+  },
+  {
+    title: "Generating Docs",
+    url: "/workspace?file=feature-generate.html",
+    icon: FileText,
+    badge: "Feature",
+    badgeColor: "text-purple-400",
+  },
+  {
+    title: "UI Reference",
+    url: "/workspace?file=ui-reference.html",
+    icon: FileCode,
+    badge: "Ref",
+    badgeColor: "text-cyan-400",
+  },
+  {
+    title: "FAQ",
+    url: "/workspace?file=faq.html",
+    icon: HelpCircle,
+    badge: "Support",
+    badgeColor: "text-yellow-400",
+  },
+  {
+    title: "Troubleshooting",
+    url: "/workspace?file=troubleshooting.html",
+    icon: Wrench,
+    badge: "Support",
+    badgeColor: "text-yellow-400",
+  },
+  {
+    title: "Release Notes",
+    url: "/workspace?file=release-notes.html",
+    icon: Tag,
+    badge: "Ref",
+    badgeColor: "text-cyan-400",
+  },
 ];
 
-const toolsItems = [
-  { title: "API Reference", icon: FileText, href: "/" },
-  { title: "Compliance Hub", icon: Shield, href: "/" },
-  { title: "Learning Academy", icon: BookOpen, href: "/" },
-  { title: "SDK Docs", icon: Layers, href: "/" },
+// ── Processing Engine — linked to real routes ─────────────────────────────────
+const toolkit = [
+  { title: "PDF Atomicizer", url: "/split", icon: Scissors, accent: "text-blue-400" },
+  { title: "Structure Merge", url: "/merge", icon: Layers, accent: "text-purple-400" },
+  { title: "OCR Ingestion", url: "/ocr", icon: ScanText, accent: "text-emerald-400" },
 ];
 
 export function AppSidebar() {
   return (
-    <Sidebar className="border-r border-slate-800 bg-slate-950">
-      <SidebarHeader className="px-4 py-4 border-b border-slate-800">
-        <div className="flex items-center gap-2">
-          <div className="w-7 h-7 rounded-lg bg-blue-600 flex items-center justify-center">
-            <Zap className="w-4 h-4 text-white" />
+    <Sidebar className="border-r border-slate-800 bg-slate-950/80 backdrop-blur-xl">
+      {/* ── Brand header ── */}
+      <SidebarHeader className="p-6">
+        <div className="flex items-center gap-3">
+          <div className="h-8 w-8 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white shadow-lg shadow-blue-500/20 text-sm">
+            D
           </div>
-          <span className="font-semibold text-slate-100 text-sm">DocCraft AI</span>
+          <div>
+            <h2 className="text-sm font-bold tracking-tight text-slate-100">DocCraft OS</h2>
+            <p className="text-[10px] text-slate-500 font-medium uppercase tracking-widest">
+              Architect Edition
+            </p>
+          </div>
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="px-3">
+        {/* ── Overview ── */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-slate-500 uppercase text-[10px] tracking-widest px-4 py-2">
-            Workspace
+          <SidebarGroupLabel className="text-slate-500 text-[10px] font-bold uppercase tracking-widest px-2 mb-2">
+            Overview
           </SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
-              {workspaceItems.map((item) => (
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  render={<a href="/" aria-label="Command Center" />}
+                  className="hover:bg-slate-900 text-slate-300 hover:text-white transition-all"
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span className="font-medium text-sm">Command Center</span>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            </SidebarMenu>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* ── Workspaces — real doccraft-help-center files ── */}
+        <SidebarGroup>
+          <div className="flex items-center justify-between px-2 mb-2">
+            <SidebarGroupLabel className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
+              Help Center Docs
+            </SidebarGroupLabel>
+            <a href="/workspace?file=index.html" title="Browse all docs">
+              <PlusCircle className="w-3 h-3 text-slate-600 hover:text-blue-500 cursor-pointer transition-colors" />
+            </a>
+          </div>
+          <SidebarGroupContent>
+            <SidebarMenu>
+              {workspaces.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton className="flex items-center gap-3 px-4 py-2 text-sm text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 rounded-lg transition-colors w-full">
-                    <item.icon className="w-4 h-4 shrink-0" />
-                    <span>{item.title}</span>
+                  <SidebarMenuButton
+                    render={<a href={item.url} aria-label={item.title} />}
+                    className="group hover:bg-slate-900 text-slate-400 hover:text-white transition-all"
+                  >
+                    <item.icon className="w-4 h-4 opacity-70 group-hover:text-blue-400 shrink-0" />
+                    <span className="text-sm flex-1">{item.title}</span>
+                    <span
+                      className={`text-[9px] font-semibold uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-opacity ${item.badgeColor}`}
+                    >
+                      {item.badge}
+                    </span>
+                    <ChevronRight className="w-3 h-3 opacity-0 group-hover:opacity-60 transition-opacity shrink-0" />
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
@@ -67,33 +165,59 @@ export function AppSidebar() {
           </SidebarGroupContent>
         </SidebarGroup>
 
+        {/* ── Processing Engine — real route links ── */}
         <SidebarGroup>
-          <SidebarGroupLabel className="text-slate-500 uppercase text-[10px] tracking-widest px-4 py-2">
-            Documentation
+          <SidebarGroupLabel className="text-slate-500 text-[10px] font-bold uppercase tracking-widest px-2 mb-2">
+            Processing Engine
           </SidebarGroupLabel>
           <SidebarGroupContent>
-            <SidebarMenu>
-              {toolsItems.map((item) => (
+            <SidebarMenu className="gap-1">
+              {toolkit.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton className="flex items-center gap-3 px-4 py-2 text-sm text-slate-400 hover:text-slate-100 hover:bg-slate-800/60 rounded-lg transition-colors w-full">
-                    <item.icon className="w-4 h-4 shrink-0" />
-                    <span>{item.title}</span>
+                  <SidebarMenuButton
+                    render={<a href={item.url} aria-label={item.title} />}
+                    className="hover:bg-slate-900 border border-transparent hover:border-slate-800 rounded-lg transition-all"
+                  >
+                    <item.icon className={`w-4 h-4 ${item.accent}`} />
+                    <span className="text-sm font-medium">{item.title}</span>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
               ))}
             </SidebarMenu>
           </SidebarGroupContent>
+        </SidebarGroup>
+
+        {/* ── Recent Activity ── */}
+        <SidebarGroup>
+          <SidebarGroupLabel className="text-slate-500 text-[10px] font-bold uppercase tracking-widest px-2 mb-2">
+            Recent Activity
+          </SidebarGroupLabel>
+          <div className="px-4 py-2 space-y-3">
+            <div className="flex items-start gap-2 border-l border-slate-800 pl-3">
+              <div className="mt-1 h-1.5 w-1.5 rounded-full bg-green-500 shrink-0 shadow-[0_0_8px_rgba(34,197,94,0.5)]" />
+              <div>
+                <p className="text-[11px] text-slate-300 font-medium">Help Center Opened</p>
+                <p className="text-[9px] text-slate-500">Ready to browse</p>
+              </div>
+            </div>
+          </div>
         </SidebarGroup>
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-slate-800 px-4 py-3">
-        <a
-          href="/"
-          className="flex items-center gap-3 text-sm text-slate-500 hover:text-slate-300 transition-colors"
-        >
-          <Settings className="w-4 h-4" />
-          <span>Settings</span>
-        </a>
+      {/* ── Footer / User ── */}
+      <SidebarFooter className="p-4 border-t border-slate-900 bg-slate-950/50">
+        <div className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-900 transition-colors cursor-pointer group">
+          <div className="h-8 w-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:border-blue-500/50 transition-colors shrink-0">
+            <span className="text-[10px] font-bold text-slate-300">SS</span>
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <p className="text-xs font-semibold text-slate-200 truncate">Sulagna Sasmal</p>
+            <p className="text-[10px] text-slate-500 truncate italic leading-tight">
+              Sr. Technical Writer
+            </p>
+          </div>
+          <Settings className="w-4 h-4 text-slate-600 group-hover:text-slate-300 shrink-0" />
+        </div>
       </SidebarFooter>
     </Sidebar>
   );
