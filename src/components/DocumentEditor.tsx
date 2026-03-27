@@ -40,6 +40,7 @@ import DiagramPanel from "@/components/DiagramPanel";
 import ComplianceRulesPanel from "@/components/ComplianceRulesPanel";
 import VersionDiffPanel from "@/components/VersionDiffPanel";
 import { safeResJson } from "@/lib/safeResJson";
+import ComplianceShield from "@/components/doccraft/ComplianceShield";
 import {
   CUSTOM_COMPLIANCE_RULES_STORAGE_KEY,
   sanitizeComplianceRules,
@@ -750,6 +751,12 @@ ${bodyHTML}
                 Preview
               </div>
               <div className="px-8 py-10 markdown-preview">
+                <ComplianceShield
+                  content={content}
+                  complianceIssues={complianceIssues}
+                  complianceRan={complianceRan}
+                  complianceLoading={complianceLoading}
+                />
                 <ReactMarkdown>{content}</ReactMarkdown>
               </div>
             </div>

@@ -2,13 +2,9 @@
 
 import { useState, useEffect, useRef } from "react";
 import Header from "@/components/Header";
-import UploadPanel from "@/components/UploadPanel";
-import ConfigPanel from "@/components/ConfigPanel";
-import ContextPanel from "@/components/ContextPanel";
 import GapAnalysis from "@/components/GapAnalysis";
 import DocumentEditor from "@/components/DocumentEditor";
 import StatusBar from "@/components/StatusBar";
-import HistoryPanel from "@/components/HistoryPanel";
 import AuthModal from "@/components/AuthModal";
 import TeamPanel from "@/components/TeamPanel";
 import AutomationPanel from "@/components/AutomationPanel";
@@ -21,10 +17,12 @@ import { supabase } from "@/lib/supabase";
 import { safeResJson } from "@/lib/safeResJson";
 import {
   Sparkles, X, Cloud, Zap, Shield, Clock,
-  FileText, Upload, Settings, Sun, Moon, RotateCcw,
-  Download, Copy, Users, Webhook, GitGraph, Palette, Globe,
+  FileText, Upload, Sun, Moon, RotateCcw,
+  Download, Copy, Users, Webhook, Palette,
   Search,
 } from "lucide-react";
+import UtilityToolbox from "@/components/doccraft/UtilityToolbox";
+import DocumentLibrary from "@/components/doccraft/DocumentLibrary";
 
 export type AppStage = "upload" | "analyzing" | "questions" | "generating" | "editing";
 
@@ -408,6 +406,14 @@ export default function Home() {
     setStage("editing");
   };
 
+  const handleDirectLoadMarkdown = (content: string, fileName: string) => {
+    setGeneratedDoc(content);
+    setBaselineDoc(content);
+    setFileNames([fileName]);
+    setStage("editing");
+    setError("");
+  };
+
   const handleSaveVersion = () => {
     if (!generatedDoc.trim()) return;
 
@@ -427,7 +433,12 @@ export default function Home() {
     uploadedContent.length > 0;
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div
+      className="min-h-screen flex flex-col bg-slate-950"
+      style={{
+        background: "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(37,99,235,0.12) 0%, transparent 70%), #020817",
+      }}
+    >
       <Header
         stage={stage}
         onStartOver={handleStartOver}
@@ -441,259 +452,186 @@ export default function Home() {
         onOpenCommandPalette={() => setShowCommandPalette(true)}
       />
 
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
-        {error && (
-          <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-accent-red text-sm animate-fade-in-up">
-            {error}
-          </div>
-        )}
+      {/* Global error bar */}
+      {error && (
+        <div className="mx-4 mt-3 p-3 bg-red-950/60 border border-red-800/60 rounded-xl text-red-300 text-sm flex items-center gap-2">
+          <X size={14} className="shrink-0" />
+          {error}
+        </div>
+      )}
 
-        {(stage === "upload" || stage === "analyzing") && (
-          <>
-            {/* Hero section — only on first upload view */}
-            {stage === "upload" && !uploadedContent.trim() && (
-              <div className="text-center mb-10 animate-fade-in-up">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-brand-50 text-brand-700 rounded-full text-xs font-semibold mb-4 border border-brand-200/60">
-                  <Sparkles size={12} />
-                  Powered by GPT-4o
-                </div>
-                <h2 className="font-display text-3xl sm:text-4xl font-extrabold text-ink-0 tracking-tight leading-tight">
-                  Turn rough notes into<br />
-                  <span className="text-brand-600">polished documentation</span>
-                </h2>
-                <p className="mt-3 text-ink-2 text-base max-w-xl mx-auto leading-relaxed">
-                  Upload your source material, configure the output, and let AI craft
-                  publication-ready docs — with smart gap analysis built in.
-                </p>
-              </div>
-            )}
+      {/* ── Business Hub — three-column layout ──────────────────────── */}
+      <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0 }}>
 
-            {/* Auth nudge — show once on upload stage when not signed in */}
-            {!user && stage === "upload" && (
-              <div className="mb-4 flex items-center gap-3 px-4 py-3 bg-gradient-to-r from-brand-50 to-indigo-50 border border-brand-200/60 rounded-xl animate-fade-in-up">
-                <Cloud size={16} className="text-brand-500 shrink-0" />
-                <p className="flex-1 text-xs text-ink-2">
-                  <span className="font-semibold text-ink-0">No account needed</span> — analyze, generate, and export docs for free.{" "}
-                  <button onClick={() => setShowAuth(true)} className="text-brand-700 font-semibold hover:underline">
-                    Sign in
-                  </button>{" "}
-                  to unlock cloud save, team workspaces, and GitHub publishing.
-                </p>
-              </div>
-            )}
+        {/* Left: Utility Toolbox (always visible) */}
+        <div className="w-[272px] shrink-0 flex flex-col overflow-hidden">
+          <UtilityToolbox
+            uploadedContent={uploadedContent}
+            fileNames={fileNames}
+            onContentChange={handleFilesUploaded}
+            config={config}
+            onConfigChange={setConfig}
+            contextText={contextText}
+            glossaryData={glossaryData}
+            onContextChange={handleContextChange}
+            onAnalyze={handleAnalyze}
+            isAnalyzing={stage === "analyzing"}
+            recommendation={recommendation}
+            recDismissed={recDismissed}
+            onApplyRecommendation={(type) => {
+              setConfig((c) => ({ ...c, docType: type }));
+              setRecDismissed(true);
+            }}
+            onDismissRecommendation={() => setRecDismissed(true)}
+            onDirectLoadMarkdown={handleDirectLoadMarkdown}
+          />
+        </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 animate-fade-in-up">
-              <div className="lg:col-span-2">
-                <UploadPanel
-                  onContentChange={handleFilesUploaded}
-                  uploadedContent={uploadedContent}
-                  fileNames={fileNames}
-                />
-              </div>
-              <div className="space-y-5">
-                <ConfigPanel config={config} onChange={setConfig} />
-                <ContextPanel
-                  onContextChange={handleContextChange}
-                  contextText={contextText}
-                  glossaryData={glossaryData}
-                />
+        {/* Center: Workspace */}
+        <main className="flex-1 flex flex-col overflow-hidden border-x border-slate-800/60">
 
-                {/* Format recommendation callout */}
-                {showRecommendation && (
-                  <div className="flex items-start gap-3 px-4 py-3 bg-brand-50 border border-brand-200 rounded-xl animate-fade-in-up">
-                    <Sparkles size={15} className="text-brand-500 mt-0.5 shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-semibold text-brand-700">
-                        Suggested:{" "}
-                        {DOC_TYPE_LABELS[recommendation.type] || recommendation.type}
-                      </p>
-                      <p className="text-[0.7rem] text-ink-2 mt-0.5 leading-relaxed">
-                        {recommendation.reason}
-                      </p>
-                      <button
-                        onClick={() => {
-                          setConfig((c) => ({ ...c, docType: recommendation.type }));
-                          setRecDismissed(true);
-                        }}
-                        className="mt-1.5 text-[0.7rem] font-semibold text-brand-700 hover:underline"
-                      >
-                        Use this →
-                      </button>
-                    </div>
-                    <button
-                      onClick={() => setRecDismissed(true)}
-                      className="text-ink-4 hover:text-ink-2 transition-colors shrink-0"
-                      aria-label="Dismiss recommendation"
-                    >
-                      <X size={13} />
-                    </button>
-                  </div>
-                )}
-
-                <button
-                  onClick={handleAnalyze}
-                  disabled={!uploadedContent.trim() || stage === "analyzing"}
-                  className="w-full py-3 px-5 bg-brand-700 text-white font-semibold rounded-xl
-                             hover:bg-brand-800 active:scale-[0.98] transition-all duration-150
-                             disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-brand-700
-                             shadow-md hover:shadow-lg text-[0.95rem] tracking-wide"
-                >
-                  {stage === "analyzing" ? (
-                    <span className="flex items-center justify-center gap-2">
-                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                      Analyzing Content…
-                    </span>
-                  ) : (
-                    "Analyze & Identify Gaps"
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* History panel — below the main grid */}
-            <HistoryPanel
+          {(stage === "upload" || stage === "analyzing") && (
+            <DocumentLibrary
               history={history}
               onRestore={handleRestoreSession}
               onRemove={removeSession}
               onClearAll={clearAll}
+              onNewDoc={handleStartOver}
             />
+          )}
 
-            {/* Value banner */}
-            {stage === "upload" && !uploadedContent.trim() && (
-              <div className="mt-10 grid grid-cols-1 sm:grid-cols-3 gap-4 animate-fade-in-up">
-                {[
-                  { icon: Zap, title: "AI Gap Analysis", desc: "Identifies missing info before generation" },
-                  { icon: Shield, title: "MSTP Compliance", desc: "Built-in style & terminology checks" },
-                  { icon: Clock, title: "10× Faster", desc: "From raw notes to polished docs in minutes" },
-                ].map((item) => (
-                  <div key={item.title} className="flex items-start gap-3 bg-surface-1 rounded-xl p-4 border border-surface-2 glass-card">
-                    <div className="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center shrink-0">
-                      <item.icon size={16} className="text-brand-600" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-semibold text-ink-0">{item.title}</p>
-                      <p className="text-xs text-ink-3 mt-0.5">{item.desc}</p>
-                    </div>
-                  </div>
-                ))}
+          {stage === "questions" && (
+            <div className="flex-1 overflow-auto p-6">
+              <GapAnalysis
+                questions={questions}
+                onSubmit={handleGenerate}
+                onBack={() => setStage("upload")}
+              />
+            </div>
+          )}
+
+          {stage === "generating" && (
+            <div className="flex-1 flex flex-col items-center justify-center p-8 animate-fade-in-up">
+              <div className="w-full max-w-md mb-8">
+                <div className="bg-slate-900/80 rounded-2xl border border-slate-800/60 p-6 skeleton-scanner" style={{ minHeight: "180px" }}>
+                  <div className="h-5 w-3/5 skeleton-shimmer rounded mb-4" />
+                  <div className="h-3 w-full skeleton-shimmer rounded mb-2.5" />
+                  <div className="h-3 w-11/12 skeleton-shimmer rounded mb-2.5" />
+                  <div className="h-3 w-4/5 skeleton-shimmer rounded mb-4" />
+                  <div className="h-4 w-2/5 skeleton-shimmer rounded mb-3" />
+                  <div className="h-3 w-full skeleton-shimmer rounded mb-2.5" />
+                  <div className="h-3 w-10/12 skeleton-shimmer rounded mb-2.5" />
+                  <div className="h-3 w-3/4 skeleton-shimmer rounded" />
+                </div>
+              </div>
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                <p className="text-slate-200 font-semibold text-lg">Generating your documentation…</p>
+              </div>
+              <p className="text-slate-500 text-sm">Streaming tokens live so you can see progress immediately.</p>
+              <button
+                onClick={handleCancelGeneration}
+                className="mt-4 px-4 py-2 rounded-lg border border-slate-700 text-sm font-medium text-slate-400 hover:bg-slate-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <div className="mt-8 w-full max-w-3xl rounded-2xl border border-slate-800/60 bg-slate-900/60 overflow-hidden">
+                <div className="px-4 py-2 border-b border-slate-800/60 text-[0.7rem] font-semibold uppercase tracking-wider text-slate-500">
+                  Live Draft
+                </div>
+                <pre className="max-h-[380px] overflow-auto px-5 py-4 text-sm leading-7 text-slate-300 whitespace-pre-wrap break-words font-mono">
+                  {streamedDoc || "Waiting for the first tokens..."}
+                </pre>
+              </div>
+            </div>
+          )}
+
+          {stage === "editing" && (
+            <div className="flex-1 overflow-auto p-4">
+              <DocumentEditor
+                content={generatedDoc}
+                onChange={setGeneratedDoc}
+                onRefine={handleRefine}
+                config={config}
+                docType={config.docType}
+                glossaryData={glossaryData}
+                history={history}
+                baselineContent={baselineDoc}
+                onSaveToCloud={handleSaveToCloud}
+                onSaveVersion={handleSaveVersion}
+                cloudSaving={cloudSaving}
+                cloudSaved={cloudSaved}
+                isLoggedIn={!!user}
+              />
+            </div>
+          )}
+        </main>
+
+        {/* Right: Insights panel */}
+        <aside
+          className="w-[240px] shrink-0 flex flex-col overflow-hidden border-l border-slate-800/60"
+          style={{
+            background: "rgba(15,23,41,0.60)",
+            backdropFilter: "blur(12px)",
+            WebkitBackdropFilter: "blur(12px)",
+          }}
+        >
+          <div className="px-4 py-3.5 border-b border-slate-800/60">
+            <h2 className="text-[0.78rem] font-semibold uppercase tracking-widest text-slate-400">
+              Insights
+            </h2>
+          </div>
+          <div className="flex-1 overflow-auto px-3 py-3 space-y-3">
+
+            {/* Auth nudge */}
+            {!user && (
+              <div className="flex items-start gap-2.5 px-3 py-2.5 bg-blue-600/10 border border-blue-500/20 rounded-xl">
+                <Cloud size={13} className="text-blue-400 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-[0.68rem] text-slate-300 leading-relaxed">
+                    <button onClick={() => setShowAuth(true)} className="text-blue-400 font-semibold hover:underline">
+                      Sign in
+                    </button>{" "}
+                    to unlock cloud save, teams &amp; GitHub publishing.
+                  </p>
+                </div>
               </div>
             )}
 
-            {/* Live Playground — interactive workflow preview */}
-            {stage === "upload" && !uploadedContent.trim() && (
-              <div className="mt-10 animate-fade-in-up">
-                <div className="text-center mb-6">
-                  <h3 className="font-display text-lg font-bold text-ink-0">See how it works</h3>
-                  <p className="text-sm text-ink-3 mt-1">Three steps from raw notes to polished documentation</p>
+            {/* Capability cards */}
+            {[
+              { icon: Zap, title: "AI Gap Analysis", desc: "Catches missing info before generation", color: "text-yellow-400", bg: "bg-yellow-900/20" },
+              { icon: Shield, title: "MSTP Compliance", desc: "Style & terminology checks built in", color: "text-emerald-400", bg: "bg-emerald-900/20" },
+              { icon: Clock, title: "10× Faster", desc: "From raw notes to polished docs", color: "text-blue-400", bg: "bg-blue-900/20" },
+            ].map((item) => (
+              <div key={item.title} className="flex items-start gap-2.5 px-3 py-2.5 bg-slate-800/30 border border-slate-700/40 rounded-xl">
+                <div className={`w-6 h-6 rounded-lg ${item.bg} flex items-center justify-center shrink-0`}>
+                  <item.icon size={12} className={item.color} />
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  {[
-                    {
-                      step: 1,
-                      title: "Upload content",
-                      preview: "# Meeting Notes\n- New auth flow needed\n- Support SAML + OIDC\n- Deadline: Q2",
-                      desc: "Drop files, paste text, or import from anywhere",
-                    },
-                    {
-                      step: 2,
-                      title: "AI analyzes gaps",
-                      preview: "⚠ Missing: authentication error handling\n⚠ Ambiguous: \"Q2\" — which year?\n✓ SAML flow details provided",
-                      desc: "Smart gap analysis catches what's missing",
-                    },
-                    {
-                      step: 3,
-                      title: "Polished docs ready",
-                      preview: "## Authentication Guide\n\n### Overview\nThis guide covers SAML and OIDC integration for enterprise SSO...",
-                      desc: "Publication-ready with ToC, formatting & compliance",
-                    },
-                  ].map((item) => (
-                    <div key={item.step} className="glass rounded-2xl border border-surface-3 overflow-hidden glass-card">
-                      <div className="px-4 py-3 border-b border-surface-3 flex items-center gap-2">
-                        <span className="w-6 h-6 rounded-full bg-brand-700 text-white text-xs font-bold flex items-center justify-center">
-                          {item.step}
-                        </span>
-                        <span className="text-sm font-semibold text-ink-0">{item.title}</span>
-                      </div>
-                      <pre className="px-4 py-3 text-xs text-ink-2 font-mono leading-relaxed whitespace-pre-wrap h-28 overflow-hidden bg-surface-1/50">
-                        {item.preview}
-                      </pre>
-                      <div className="px-4 py-2.5 border-t border-surface-2">
-                        <p className="text-[0.7rem] text-ink-3">{item.desc}</p>
-                      </div>
-                    </div>
-                  ))}
+                <div>
+                  <p className="text-[0.72rem] font-semibold text-slate-200">{item.title}</p>
+                  <p className="text-[0.62rem] text-slate-500 mt-0.5 leading-relaxed">{item.desc}</p>
                 </div>
               </div>
-            )}
-          </>
-        )}
+            ))}
 
-        {stage === "questions" && (
-          <GapAnalysis
-            questions={questions}
-            onSubmit={handleGenerate}
-            onBack={() => setStage("upload")}
-          />
-        )}
-
-        {stage === "generating" && (
-          <div className="flex flex-col items-center justify-center py-16 animate-fade-in-up">
-            {/* Skeleton document with scanner */}
-            <div className="w-full max-w-md mb-8">
-              <div className="bg-surface-0 rounded-2xl border border-surface-3 shadow-card p-6 skeleton-scanner" style={{ minHeight: '180px' }}>
-                {/* Fake document skeleton lines */}
-                <div className="h-5 w-3/5 skeleton-shimmer rounded mb-4" />
-                <div className="h-3 w-full skeleton-shimmer rounded mb-2.5" />
-                <div className="h-3 w-11/12 skeleton-shimmer rounded mb-2.5" />
-                <div className="h-3 w-4/5 skeleton-shimmer rounded mb-4" />
-                <div className="h-4 w-2/5 skeleton-shimmer rounded mb-3" />
-                <div className="h-3 w-full skeleton-shimmer rounded mb-2.5" />
-                <div className="h-3 w-10/12 skeleton-shimmer rounded mb-2.5" />
-                <div className="h-3 w-3/4 skeleton-shimmer rounded" />
+            {/* Stage-aware status */}
+            <div className="px-3 py-2.5 bg-slate-800/30 border border-slate-700/40 rounded-xl">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500 mb-1.5">Status</p>
+              <div className="flex items-center gap-2">
+                <span className={`w-1.5 h-1.5 rounded-full ${stage === "analyzing" || stage === "generating" ? "bg-blue-400 animate-pulse" : "bg-slate-600"}`} />
+                <span className="text-[0.72rem] text-slate-300 capitalize">{stage}</span>
               </div>
-            </div>
-
-            <div className="flex items-center gap-2 mb-2">
-              <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
-              <p className="text-ink-1 font-semibold text-lg">Generating your documentation…</p>
-            </div>
-            <p className="text-ink-3 text-sm">Streaming tokens live so you can see progress immediately.</p>
-            <button
-              onClick={handleCancelGeneration}
-              className="mt-4 px-4 py-2 rounded-lg border border-surface-3 text-sm font-medium text-ink-2 hover:bg-surface-2 transition-colors"
-            >
-              Cancel
-            </button>
-
-            <div className="mt-8 w-full max-w-4xl rounded-2xl border border-surface-3 bg-surface-0 shadow-card overflow-hidden">
-              <div className="px-4 py-2 border-b border-surface-2 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-3 bg-surface-1">
-                Live Draft
-              </div>
-              <pre className="max-h-[420px] overflow-auto px-5 py-4 text-sm leading-7 text-ink-1 whitespace-pre-wrap break-words font-mono">
-                {streamedDoc || "Waiting for the first tokens..."}
-              </pre>
+              {fileNames.length > 0 && (
+                <p className="text-[0.65rem] text-slate-500 mt-1">
+                  {fileNames.length} source{fileNames.length > 1 ? "s" : ""} loaded
+                </p>
+              )}
             </div>
           </div>
-        )}
+        </aside>
 
-        {stage === "editing" && (
-          <DocumentEditor
-            content={generatedDoc}
-            onChange={setGeneratedDoc}
-            onRefine={handleRefine}
-            config={config}
-            docType={config.docType}
-            glossaryData={glossaryData}
-            history={history}
-            baselineContent={baselineDoc}
-            onSaveToCloud={handleSaveToCloud}
-            onSaveVersion={handleSaveVersion}
-            cloudSaving={cloudSaving}
-            cloudSaved={cloudSaved}
-            isLoggedIn={!!user}
-          />
-        )}
-      </main>
+      </div>
 
       <StatusBar stage={stage} fileCount={fileNames.length} />
 
