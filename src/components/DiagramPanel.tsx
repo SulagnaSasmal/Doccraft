@@ -98,7 +98,7 @@ export default function DiagramPanel({
   };
 
   return (
-    <div className="mt-4 bg-white rounded-2xl border border-surface-3 shadow-card overflow-hidden animate-fade-in-up">
+    <div className="mt-4 bg-surface-0 rounded-2xl border border-surface-3 shadow-card overflow-hidden animate-fade-in-up">
       {/* Header */}
       <div className="px-4 py-3 border-b border-surface-2 flex items-center justify-between flex-wrap gap-2">
         <div className="flex items-center gap-2">
@@ -115,7 +115,7 @@ export default function DiagramPanel({
                 disabled={loading}
                 className={`px-2.5 py-1 rounded-md text-[0.7rem] font-medium transition-colors disabled:opacity-50 ${
                   diagramType === t.value
-                    ? "bg-white text-ink-0 shadow-sm"
+                    ? "bg-surface-0 text-ink-0 shadow-sm"
                     : "text-ink-3 hover:text-ink-1"
                 }`}
               >

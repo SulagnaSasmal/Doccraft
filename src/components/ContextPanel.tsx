@@ -225,7 +225,7 @@ export default function ContextPanel({
     }`;
 
   return (
-    <div className="bg-white rounded-2xl shadow-card border border-surface-3 overflow-hidden">
+    <div className="bg-surface-0 rounded-2xl shadow-card border border-surface-3 overflow-hidden">
       {/* Header */}
       <div
         className="px-5 py-4 flex items-center justify-between cursor-pointer select-none hover:bg-surface-1 transition-colors"

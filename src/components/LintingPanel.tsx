@@ -346,7 +346,7 @@ export default function LintingPanel({
   const infoCount = allIssues.filter((i) => i.severity === "info").length;
 
   return (
-    <div className="bg-white rounded-2xl shadow-card border border-surface-3 overflow-hidden mt-6 animate-fade-in-up">
+    <div className="bg-surface-0 rounded-2xl shadow-card border border-surface-3 overflow-hidden mt-6 animate-fade-in-up">
       {/* Header */}
       <button
         onClick={() => setExpanded(!expanded)}

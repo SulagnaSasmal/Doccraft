@@ -57,7 +57,7 @@ export default function ComplianceRulesPanel({
   };
 
   return (
-    <div className="mt-4 bg-white rounded-2xl border border-surface-3 shadow-card overflow-hidden animate-fade-in-up">
+    <div className="mt-4 bg-surface-0 rounded-2xl border border-surface-3 shadow-card overflow-hidden animate-fade-in-up">
       <div className="px-5 py-3.5 border-b border-surface-2 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
           <ShieldPlus size={16} className="text-brand-600 shrink-0" />
@@ -143,20 +143,20 @@ export default function ComplianceRulesPanel({
         <div className="p-5 bg-surface-1/60">
           <div className="flex items-center justify-between mb-3">
             <p className="text-sm font-semibold text-ink-1">Active profile</p>
-            <span className="text-[0.7rem] text-ink-3 bg-white border border-surface-3 px-2 py-1 rounded-full">
+            <span className="text-[0.7rem] text-ink-3 bg-surface-0 border border-surface-3 px-2 py-1 rounded-full">
               {rules.length} rules, {normalizedCount} trigger{normalizedCount === 1 ? "" : "s"}
             </span>
           </div>
 
           <div className="space-y-2 max-h-[340px] overflow-auto">
             {rules.length === 0 && (
-              <div className="rounded-xl border border-dashed border-surface-3 bg-white px-4 py-6 text-center text-sm text-ink-3">
+              <div className="rounded-xl border border-dashed border-surface-3 bg-surface-0 px-4 py-6 text-center text-sm text-ink-3">
                 Add custom compliance rules for brand voice, legal disclaimers, regulated terms, or approval gates.
               </div>
             )}
 
             {rules.map((rule) => (
-              <div key={rule.id} className="rounded-xl border border-surface-3 bg-white px-4 py-3">
+              <div key={rule.id} className="rounded-xl border border-surface-3 bg-surface-0 px-4 py-3">
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <p className="text-sm font-semibold text-ink-0">{rule.name}</p>
@@ -196,7 +196,7 @@ export default function ComplianceRulesPanel({
   );
 }
 
-const inputCls = "w-full px-3 py-2 rounded-lg border border-surface-3 bg-white text-sm text-ink-1 focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400";
+const inputCls = "w-full px-3 py-2 rounded-lg border border-surface-3 bg-surface-0 text-sm text-ink-1 focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400";
 
 function Field({
   label,

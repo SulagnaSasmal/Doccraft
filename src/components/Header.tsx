@@ -1,6 +1,6 @@
 "use client";
 
-import { FileText, RotateCcw, Users, LogOut, User, Cloud, HelpCircle, Webhook, Check } from "lucide-react";
+import { FileText, RotateCcw, Users, LogOut, User, Cloud, HelpCircle, Webhook, Check, Sun, Moon, Search } from "lucide-react";
 import type { AppStage } from "@/app/page";
 
 const STAGE_LABELS: Record<AppStage, string> = {
@@ -19,6 +19,9 @@ export default function Header({
   onSignOut,
   onShowTeam,
   onShowAutomation,
+  isDark,
+  onToggleTheme,
+  onOpenCommandPalette,
 }: {
   stage: AppStage;
   onStartOver: () => void;
@@ -27,11 +30,14 @@ export default function Header({
   onSignOut?: () => void;
   onShowTeam?: () => void;
   onShowAutomation?: () => void;
+  isDark?: boolean;
+  onToggleTheme?: () => void;
+  onOpenCommandPalette?: () => void;
 }) {
   const stages: AppStage[] = ["upload", "questions", "editing"];
 
   return (
-    <header className="bg-white border-b border-surface-3 sticky top-0 z-50">
+    <header className="bg-surface-0 border-b border-surface-3 sticky top-0 z-50 glass">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-brand-700 rounded-lg flex items-center justify-center shadow-sm">
@@ -91,6 +97,29 @@ export default function Header({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* CMD+K Command Palette trigger */}
+          {onOpenCommandPalette && (
+            <button
+              onClick={onOpenCommandPalette}
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-ink-3
+                         hover:text-ink-0 hover:bg-surface-2 rounded-lg transition-colors border border-surface-3"
+              title="Command Palette"
+            >
+              <Search size={13} />
+              <kbd className="text-[0.6rem] font-mono text-ink-4">⌘K</kbd>
+            </button>
+          )}
+          {/* Dark mode toggle */}
+          {onToggleTheme && (
+            <button
+              onClick={onToggleTheme}
+              className="flex items-center justify-center w-8 h-8 text-ink-3
+                         hover:text-ink-0 hover:bg-surface-2 rounded-lg transition-colors"
+              title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {isDark ? <Sun size={15} /> : <Moon size={15} />}
+            </button>
+          )}
           {stage !== "upload" && (
             <button
               onClick={onStartOver}

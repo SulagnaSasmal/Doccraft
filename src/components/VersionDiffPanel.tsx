@@ -122,7 +122,7 @@ export default function VersionDiffPanel({
   const changedRows = rows.filter((row) => row.type !== "same").length;
 
   return (
-    <div className="mt-4 bg-white rounded-2xl border border-surface-3 shadow-card overflow-hidden animate-fade-in-up">
+    <div className="mt-4 bg-surface-0 rounded-2xl border border-surface-3 shadow-card overflow-hidden animate-fade-in-up">
       <div className="px-5 py-3.5 border-b border-surface-2 flex items-center justify-between gap-4">
         <div className="flex items-center gap-2.5">
           <GitCompare size={16} className="text-brand-600 shrink-0" />
@@ -232,7 +232,7 @@ function LineCell({
       : variant === "removed"
       ? "bg-red-50"
       : "bg-amber-50"
-    : "bg-white";
+    : "bg-surface-0";
 
   return (
     <div className={`grid grid-cols-[56px_1fr] ${withBorder ? "xl:border-l xl:border-surface-2" : ""} border-b border-surface-2 ${bgClass}`}>

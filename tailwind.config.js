@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 module.exports = {
   content: ["./src/**/*.{js,ts,jsx,tsx,mdx}"],
+  darkMode: "class",
   theme: {
     extend: {
       fontFamily: {
@@ -22,18 +23,18 @@ module.exports = {
           900: '#364fc7',
         },
         surface: {
-          0: '#ffffff',
-          1: '#f8f9fc',
-          2: '#f1f3f9',
-          3: '#e8ecf4',
-          4: '#dde2ed',
+          0: 'var(--surface-0)',
+          1: 'var(--surface-1)',
+          2: 'var(--surface-2)',
+          3: 'var(--surface-3)',
+          4: 'var(--surface-4)',
         },
         ink: {
-          0: '#0f1729',
-          1: '#2b3a5c',
-          2: '#556889',
-          3: '#8494b2',
-          4: '#a8b5cc',
+          0: 'var(--ink-0)',
+          1: 'var(--ink-1)',
+          2: 'var(--ink-2)',
+          3: 'var(--ink-3)',
+          4: 'var(--ink-4)',
         },
         accent: {
           green: '#12b886',
@@ -46,7 +47,40 @@ module.exports = {
         'card': '0 1px 3px rgba(15, 23, 41, 0.04), 0 4px 12px rgba(15, 23, 41, 0.06)',
         'card-hover': '0 2px 8px rgba(15, 23, 41, 0.06), 0 8px 24px rgba(15, 23, 41, 0.1)',
         'panel': '0 0 0 1px rgba(15, 23, 41, 0.06), 0 2px 6px rgba(15, 23, 41, 0.04)',
-      }
+        'glass': '0 8px 32px rgba(15, 23, 41, 0.08)',
+      },
+      backdropBlur: {
+        'glass': '16px',
+      },
+      keyframes: {
+        'scan-line': {
+          '0%': { top: '0%' },
+          '100%': { top: '100%' },
+        },
+        'slide-up-fade': {
+          '0%': { opacity: '0', transform: 'translateY(16px) scale(0.98)' },
+          '100%': { opacity: '1', transform: 'translateY(0) scale(1)' },
+        },
+        'page-split': {
+          '0%': { transform: 'translateX(0) rotate(0deg)', opacity: '1' },
+          '100%': { transform: 'translateX(30px) rotate(3deg)', opacity: '0.7' },
+        },
+        'page-stack': {
+          '0%': { transform: 'translateY(-10px)', opacity: '0.5' },
+          '100%': { transform: 'translateY(0)', opacity: '1' },
+        },
+        'shimmer': {
+          '0%': { backgroundPosition: '-200% 0' },
+          '100%': { backgroundPosition: '200% 0' },
+        },
+      },
+      animation: {
+        'scan-line': 'scan-line 2s ease-in-out infinite alternate',
+        'slide-up-fade': 'slide-up-fade 0.35s ease-out forwards',
+        'page-split': 'page-split 0.6s ease-out forwards',
+        'page-stack': 'page-stack 0.4s ease-out forwards',
+        'shimmer': 'shimmer 2s linear infinite',
+      },
     },
   },
   plugins: [],

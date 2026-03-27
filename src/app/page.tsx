@@ -12,11 +12,19 @@ import HistoryPanel from "@/components/HistoryPanel";
 import AuthModal from "@/components/AuthModal";
 import TeamPanel from "@/components/TeamPanel";
 import AutomationPanel from "@/components/AutomationPanel";
+import CommandPalette, { type CommandAction } from "@/components/CommandPalette";
+import BrandKitPanel from "@/components/BrandKitPanel";
+import { useTheme } from "@/lib/useTheme";
 import { useDocHistory, type DocSession } from "@/lib/useDocHistory";
 import type { GlossaryData } from "@/lib/validateTerminology";
 import { supabase } from "@/lib/supabase";
 import { safeResJson } from "@/lib/safeResJson";
-import { Sparkles, X, Cloud, Zap, Shield, Clock } from "lucide-react";
+import {
+  Sparkles, X, Cloud, Zap, Shield, Clock,
+  FileText, Upload, Settings, Sun, Moon, RotateCcw,
+  Download, Copy, Users, Webhook, GitGraph, Palette, Globe,
+  Search,
+} from "lucide-react";
 
 export type AppStage = "upload" | "analyzing" | "questions" | "generating" | "editing";
 
@@ -81,6 +89,21 @@ export default function Home() {
   const [cloudSaving, setCloudSaving] = useState(false);
   const [cloudSaved, setCloudSaved] = useState(false);
   const [currentDocId, setCurrentDocId] = useState<string | null>(null);
+  const [showCommandPalette, setShowCommandPalette] = useState(false);
+  const [showBrandKit, setShowBrandKit] = useState(false);
+  const { theme, toggle: toggleTheme, isDark } = useTheme();
+
+  // CMD+K keyboard shortcut for command palette
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === "k") {
+        e.preventDefault();
+        setShowCommandPalette((v) => !v);
+      }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
 
   useEffect(() => {
     // Restore session on mount
@@ -413,6 +436,9 @@ export default function Home() {
         onSignOut={handleSignOut}
         onShowTeam={() => setShowTeam(true)}
         onShowAutomation={() => setShowAutomation(true)}
+        isDark={isDark}
+        onToggleTheme={toggleTheme}
+        onOpenCommandPalette={() => setShowCommandPalette(true)}
       />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6">
@@ -540,8 +566,8 @@ export default function Home() {
                   { icon: Shield, title: "MSTP Compliance", desc: "Built-in style & terminology checks" },
                   { icon: Clock, title: "10× Faster", desc: "From raw notes to polished docs in minutes" },
                 ].map((item) => (
-                  <div key={item.title} className="flex items-start gap-3 bg-surface-1 rounded-xl p-4 border border-surface-2">
-                    <div className="w-8 h-8 rounded-lg bg-brand-50 flex items-center justify-center shrink-0">
+                  <div key={item.title} className="flex items-start gap-3 bg-surface-1 rounded-xl p-4 border border-surface-2 glass-card">
+                    <div className="w-8 h-8 rounded-lg bg-brand-50 dark:bg-brand-900/30 flex items-center justify-center shrink-0">
                       <item.icon size={16} className="text-brand-600" />
                     </div>
                     <div>
@@ -550,6 +576,53 @@ export default function Home() {
                     </div>
                   </div>
                 ))}
+              </div>
+            )}
+
+            {/* Live Playground — interactive workflow preview */}
+            {stage === "upload" && !uploadedContent.trim() && (
+              <div className="mt-10 animate-fade-in-up">
+                <div className="text-center mb-6">
+                  <h3 className="font-display text-lg font-bold text-ink-0">See how it works</h3>
+                  <p className="text-sm text-ink-3 mt-1">Three steps from raw notes to polished documentation</p>
+                </div>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  {[
+                    {
+                      step: 1,
+                      title: "Upload content",
+                      preview: "# Meeting Notes\n- New auth flow needed\n- Support SAML + OIDC\n- Deadline: Q2",
+                      desc: "Drop files, paste text, or import from anywhere",
+                    },
+                    {
+                      step: 2,
+                      title: "AI analyzes gaps",
+                      preview: "⚠ Missing: authentication error handling\n⚠ Ambiguous: \"Q2\" — which year?\n✓ SAML flow details provided",
+                      desc: "Smart gap analysis catches what's missing",
+                    },
+                    {
+                      step: 3,
+                      title: "Polished docs ready",
+                      preview: "## Authentication Guide\n\n### Overview\nThis guide covers SAML and OIDC integration for enterprise SSO...",
+                      desc: "Publication-ready with ToC, formatting & compliance",
+                    },
+                  ].map((item) => (
+                    <div key={item.step} className="glass rounded-2xl border border-surface-3 overflow-hidden glass-card">
+                      <div className="px-4 py-3 border-b border-surface-3 flex items-center gap-2">
+                        <span className="w-6 h-6 rounded-full bg-brand-700 text-white text-xs font-bold flex items-center justify-center">
+                          {item.step}
+                        </span>
+                        <span className="text-sm font-semibold text-ink-0">{item.title}</span>
+                      </div>
+                      <pre className="px-4 py-3 text-xs text-ink-2 font-mono leading-relaxed whitespace-pre-wrap h-28 overflow-hidden bg-surface-1/50">
+                        {item.preview}
+                      </pre>
+                      <div className="px-4 py-2.5 border-t border-surface-2">
+                        <p className="text-[0.7rem] text-ink-3">{item.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </>
@@ -564,10 +637,27 @@ export default function Home() {
         )}
 
         {stage === "generating" && (
-          <div className="flex flex-col items-center justify-center py-24 animate-fade-in-up">
-            <div className="w-12 h-12 border-3 border-brand-200 border-t-brand-600 rounded-full animate-spin mb-5" />
-            <p className="text-ink-2 font-medium text-lg">Generating your documentation…</p>
-            <p className="text-ink-3 text-sm mt-1">Streaming tokens live so you can see progress immediately.</p>
+          <div className="flex flex-col items-center justify-center py-16 animate-fade-in-up">
+            {/* Skeleton document with scanner */}
+            <div className="w-full max-w-md mb-8">
+              <div className="bg-surface-0 rounded-2xl border border-surface-3 shadow-card p-6 skeleton-scanner" style={{ minHeight: '180px' }}>
+                {/* Fake document skeleton lines */}
+                <div className="h-5 w-3/5 skeleton-shimmer rounded mb-4" />
+                <div className="h-3 w-full skeleton-shimmer rounded mb-2.5" />
+                <div className="h-3 w-11/12 skeleton-shimmer rounded mb-2.5" />
+                <div className="h-3 w-4/5 skeleton-shimmer rounded mb-4" />
+                <div className="h-4 w-2/5 skeleton-shimmer rounded mb-3" />
+                <div className="h-3 w-full skeleton-shimmer rounded mb-2.5" />
+                <div className="h-3 w-10/12 skeleton-shimmer rounded mb-2.5" />
+                <div className="h-3 w-3/4 skeleton-shimmer rounded" />
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2 mb-2">
+              <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" />
+              <p className="text-ink-1 font-semibold text-lg">Generating your documentation…</p>
+            </div>
+            <p className="text-ink-3 text-sm">Streaming tokens live so you can see progress immediately.</p>
             <button
               onClick={handleCancelGeneration}
               className="mt-4 px-4 py-2 rounded-lg border border-surface-3 text-sm font-medium text-ink-2 hover:bg-surface-2 transition-colors"
@@ -575,7 +665,7 @@ export default function Home() {
               Cancel
             </button>
 
-            <div className="mt-8 w-full max-w-4xl rounded-2xl border border-surface-3 bg-white shadow-card overflow-hidden">
+            <div className="mt-8 w-full max-w-4xl rounded-2xl border border-surface-3 bg-surface-0 shadow-card overflow-hidden">
               <div className="px-4 py-2 border-b border-surface-2 text-[0.7rem] font-semibold uppercase tracking-wider text-ink-3 bg-surface-1">
                 Live Draft
               </div>
@@ -623,6 +713,32 @@ export default function Home() {
       )}
       {showAutomation && (
         <AutomationPanel onClose={() => setShowAutomation(false)} />
+      )}
+
+      {/* Command Palette */}
+      <CommandPalette
+        open={showCommandPalette}
+        onClose={() => setShowCommandPalette(false)}
+        actions={[
+          { id: "nav-upload", label: "Go to Upload", description: "Upload files or paste content", icon: Upload, group: "Navigation", action: () => { setStage("upload"); } },
+          { id: "nav-editing", label: "Go to Editor", description: "Jump to document editor", icon: FileText, group: "Navigation", action: () => { if (generatedDoc) setStage("editing"); } },
+          { id: "theme-toggle", label: isDark ? "Switch to Light Mode" : "Switch to Dark Mode", icon: isDark ? Sun : Moon, group: "Appearance", shortcut: "⌘K T", action: toggleTheme },
+          { id: "brand-kit", label: "Open Brand Kit", description: "Logo, colors & company details", icon: Palette, group: "Tools", action: () => setShowBrandKit(true) },
+          { id: "start-over", label: "Start Over", description: "Reset everything and begin fresh", icon: RotateCcw, group: "Actions", action: handleStartOver },
+          { id: "analyze", label: "Analyze Content", description: "Run AI gap analysis", icon: Search, group: "Actions", action: () => { if (uploadedContent.trim()) handleAnalyze(); } },
+          { id: "cloud-save", label: "Save to Cloud", description: "Save your document to the cloud", icon: Cloud, group: "Actions", action: handleSaveToCloud },
+          { id: "show-team", label: "Team Workspace", description: "Collaborate with your team", icon: Users, group: "Tools", action: () => setShowTeam(true) },
+          { id: "automation", label: "CI/CD Automation", description: "Set up webhook pipelines", icon: Webhook, group: "Tools", action: () => setShowAutomation(true) },
+        ] as CommandAction[]}
+      />
+
+      {/* Brand Kit Panel */}
+      {showBrandKit && (
+        <div className="fixed inset-0 z-[90] cmd-backdrop flex items-start justify-center pt-[10vh]" onClick={() => setShowBrandKit(false)}>
+          <div className="w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+            <BrandKitPanel onClose={() => setShowBrandKit(false)} />
+          </div>
+        </div>
       )}
     </div>
   );

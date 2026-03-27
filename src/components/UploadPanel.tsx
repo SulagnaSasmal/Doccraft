@@ -1,7 +1,21 @@
 "use client";
 
 import { useState, useRef, DragEvent } from "react";
-import { Upload, FileText, Image, X, ClipboardPaste } from "lucide-react";
+import { Upload, FileText, Image, X, ClipboardPaste, Code, Table, FileJson, FileImage } from "lucide-react";
+
+const FILE_TYPE_HINTS: Record<string, { label: string; desc: string; Icon: typeof FileText }> = {
+  md: { label: "Markdown", desc: "Parse headings & structure", Icon: FileText },
+  txt: { label: "Plain Text", desc: "Extract raw content", Icon: FileText },
+  csv: { label: "CSV Data", desc: "Tabular data → docs", Icon: Table },
+  json: { label: "JSON", desc: "Structured data → docs", Icon: FileJson },
+  png: { label: "Image", desc: "OCR + AI vision analysis", Icon: FileImage },
+  jpg: { label: "Image", desc: "OCR + AI vision analysis", Icon: FileImage },
+  jpeg: { label: "Image", desc: "OCR + AI vision analysis", Icon: FileImage },
+  gif: { label: "Image", desc: "AI vision analysis", Icon: FileImage },
+  webp: { label: "Image", desc: "AI vision analysis", Icon: FileImage },
+  pdf: { label: "PDF", desc: "Extract text & structure", Icon: FileText },
+  docx: { label: "Word Doc", desc: "Parse document content", Icon: FileText },
+};
 
 export default function UploadPanel({
   onContentChange,
@@ -13,6 +27,7 @@ export default function UploadPanel({
   fileNames: string[];
 }) {
   const [isDragging, setIsDragging] = useState(false);
+  const [dragFileTypes, setDragFileTypes] = useState<string[]>([]);
   const [pasteMode, setPasteMode] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -21,6 +36,23 @@ export default function UploadPanel({
     e.preventDefault();
     e.stopPropagation();
     setIsDragging(enter);
+    if (enter && e.dataTransfer.items) {
+      const extensions: string[] = [];
+      for (const item of Array.from(e.dataTransfer.items)) {
+        if (item.kind === "file") {
+          const type = item.type;
+          if (type.startsWith("image/")) extensions.push(type.split("/")[1] === "jpeg" ? "jpg" : type.split("/")[1]);
+          else if (type === "text/plain") extensions.push("txt");
+          else if (type === "text/csv") extensions.push("csv");
+          else if (type === "application/json") extensions.push("json");
+          else if (type === "application/pdf") extensions.push("pdf");
+          else if (type.includes("word") || type.includes("document")) extensions.push("docx");
+          else if (type === "text/markdown") extensions.push("md");
+        }
+      }
+      setDragFileTypes(Array.from(new Set(extensions)));
+    }
+    if (!enter) setDragFileTypes([]);
   };
 
   const processFiles = async (files: FileList) => {
@@ -82,7 +114,7 @@ export default function UploadPanel({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-card border border-surface-3 overflow-hidden">
+    <div className="bg-surface-0 rounded-2xl shadow-card border border-surface-3 overflow-hidden">
       <div className="px-5 py-4 border-b border-surface-2 flex items-center justify-between">
         <div>
           <h2 className="font-display font-semibold text-ink-0 text-[0.95rem]">Source Material</h2>
@@ -120,7 +152,7 @@ export default function UploadPanel({
             onClick={() => fileInputRef.current?.click()}
             className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 ${
               isDragging
-                ? "border-brand-500 bg-brand-50"
+                ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 drop-zone-active"
                 : "border-surface-4 hover:border-brand-300 hover:bg-surface-1"
             }`}
           >
@@ -132,15 +164,49 @@ export default function UploadPanel({
               onChange={(e) => e.target.files && processFiles(e.target.files)}
               className="hidden"
             />
-            <div className="w-12 h-12 bg-surface-2 rounded-xl flex items-center justify-center mx-auto mb-3">
-              <Upload size={22} className="text-ink-3" />
-            </div>
-            <p className="font-medium text-ink-1 text-sm">
-              Drop files here or <span className="text-brand-600">browse</span>
-            </p>
-            <p className="text-xs text-ink-3 mt-1.5">
-              TXT, MD, JSON, CSV, Images • PDF &amp; DOCX with backend parser
-            </p>
+
+            {/* Smart drag-over: show detected file type actions */}
+            {isDragging && dragFileTypes.length > 0 ? (
+              <div className="animate-fade-in-up">
+                <div className="w-12 h-12 bg-brand-100 dark:bg-brand-900/40 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Upload size={22} className="text-brand-600" />
+                </div>
+                <p className="font-semibold text-brand-700 dark:text-brand-300 text-sm mb-3">Drop to process</p>
+                <div className="flex flex-wrap items-center justify-center gap-2">
+                  {dragFileTypes.map((ext) => {
+                    const hint = FILE_TYPE_HINTS[ext];
+                    if (!hint) return null;
+                    const HintIcon = hint.Icon;
+                    return (
+                      <span key={ext} className="inline-flex items-center gap-1.5 px-2.5 py-1.5 bg-surface-0 dark:bg-surface-2 rounded-lg border border-brand-200 dark:border-surface-4 text-xs shadow-sm">
+                        <HintIcon size={12} className="text-brand-500" />
+                        <span className="font-medium text-ink-0">{hint.label}</span>
+                        <span className="text-ink-3">→ {hint.desc}</span>
+                      </span>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : isDragging ? (
+              <div className="animate-fade-in-up">
+                <div className="w-12 h-12 bg-brand-100 dark:bg-brand-900/40 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Upload size={22} className="text-brand-600" />
+                </div>
+                <p className="font-semibold text-brand-700 dark:text-brand-300 text-sm">Drop files here</p>
+              </div>
+            ) : (
+              <>
+                <div className="w-12 h-12 bg-surface-2 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Upload size={22} className="text-ink-3" />
+                </div>
+                <p className="font-medium text-ink-1 text-sm">
+                  Drop files here or <span className="text-brand-600">browse</span>
+                </p>
+                <p className="text-xs text-ink-3 mt-1.5">
+                  TXT, MD, JSON, CSV, Images • PDF &amp; DOCX with backend parser
+                </p>
+              </>
+            )}
           </div>
         ) : (
           <div className="space-y-3">

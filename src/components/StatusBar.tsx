@@ -18,7 +18,7 @@ export default function StatusBar({
   fileCount: number;
 }) {
   return (
-    <footer className="border-t border-surface-2 bg-white/80 backdrop-blur-sm">
+    <footer className="border-t border-surface-2 bg-surface-0/80 backdrop-blur-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 py-2 flex items-center justify-between">
         <p className="text-[0.7rem] text-ink-3">
           {TIPS[stage]}

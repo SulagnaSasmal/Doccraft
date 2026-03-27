@@ -93,7 +93,7 @@ export default function TeamPanel({
 
   return (
     <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-      <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md border border-surface-3 overflow-hidden">
+      <div className="bg-surface-0 rounded-2xl shadow-2xl w-full max-w-md border border-surface-3 overflow-hidden">
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-2">
           <div className="flex items-center gap-2">
             <Users size={16} className="text-brand-600" />

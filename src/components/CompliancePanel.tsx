@@ -101,7 +101,7 @@ export default function CompliancePanel({
   const suggestionCount = visible.filter((i) => i.severity === "suggestion").length;
 
   return (
-    <div className="mt-4 bg-white rounded-2xl border border-surface-3 shadow-card animate-fade-in-up overflow-hidden">
+    <div className="mt-4 bg-surface-0 rounded-2xl border border-surface-3 shadow-card animate-fade-in-up overflow-hidden">
       {/* Header */}
       <div className="px-5 py-3.5 border-b border-surface-2 flex items-center justify-between">
         <div className="flex items-center gap-2.5">
@@ -185,7 +185,7 @@ export default function CompliancePanel({
               return (
                 <div
                   key={issue.id}
-                  className={`rounded-xl border ${sev.row} bg-white overflow-hidden`}
+                  className={`rounded-xl border ${sev.row} bg-surface-0 overflow-hidden`}
                 >
                   {/* Issue row */}
                   <div className="flex items-start gap-2.5 px-3.5 py-2.5">

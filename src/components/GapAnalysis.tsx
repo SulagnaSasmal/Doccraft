@@ -73,7 +73,7 @@ export default function GapAnalysis({
     return (
       <div
         key={q.id}
-        className={`bg-white rounded-xl border shadow-card overflow-hidden transition-all duration-200 ${
+        className={`bg-surface-0 rounded-xl border shadow-card overflow-hidden transition-all duration-200 ${
           q.skipped ? "opacity-50 border-surface-3" : isCritical ? "border-red-200" : "border-surface-3"
         }`}
         style={{ animationDelay: `${i * 60}ms` }}

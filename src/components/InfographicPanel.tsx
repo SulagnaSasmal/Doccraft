@@ -65,7 +65,7 @@ export default function InfographicPanel({
   };
 
   return (
-    <div className="border border-surface-3 rounded-2xl bg-white shadow-card overflow-hidden">
+    <div className="border border-surface-3 rounded-2xl bg-surface-0 shadow-card overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-surface-2 bg-surface-1">
         <div className="flex items-center gap-2">

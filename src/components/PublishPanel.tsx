@@ -130,7 +130,7 @@ export default function PublishPanel({
   ];
 
   return (
-    <div className="border border-surface-3 rounded-2xl bg-white shadow-card overflow-hidden">
+    <div className="border border-surface-3 rounded-2xl bg-surface-0 shadow-card overflow-hidden">
       {/* Header */}
       <div className="flex items-center justify-between px-5 py-3 border-b border-surface-2 bg-surface-1">
         <div className="flex items-center gap-2">
@@ -283,7 +283,7 @@ export default function PublishPanel({
   );
 }
 
-const inputCls = "w-full px-3 py-2 text-sm border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 bg-white";
+const inputCls = "w-full px-3 py-2 text-sm border border-surface-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 bg-surface-0";
 
 function Field({ label, hint, children }: { label: string; hint?: string; children: React.ReactNode }) {
   return (

@@ -39,7 +39,7 @@ export default function HistoryPanel({
   if (history.length === 0) return null;
 
   return (
-    <div className="mt-6 bg-white rounded-2xl border border-surface-3 shadow-card overflow-hidden animate-fade-in-up">
+    <div className="mt-6 bg-surface-0 rounded-2xl border border-surface-3 shadow-card overflow-hidden animate-fade-in-up">
       {/* Header */}
       <div
         className="px-5 py-3.5 flex items-center justify-between cursor-pointer hover:bg-surface-1 transition-colors select-none"
