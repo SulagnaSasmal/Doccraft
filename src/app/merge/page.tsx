@@ -1,7 +1,12 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { Layers, Upload, FileText, X, GripVertical, ChevronRight, ArrowLeft, Shield, Zap } from "lucide-react";
+import { Suspense, useState, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Layers, Upload, FileText, X, GripVertical,
+  ChevronRight, ArrowLeft, Shield, Zap,
+  Loader2, CheckCircle2, AlertCircle, Download,
+} from "lucide-react";
 
 interface PdfFile {
   id: string;
@@ -10,16 +15,38 @@ interface PdfFile {
   file: File;
 }
 
-export default function MergePage() {
+function downloadBase64Pdf(base64: string, filename: string) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function MergeInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromFile = searchParams.get("from");
+
   const [files, setFiles] = useState<PdfFile[]>([]);
   const [dragging, setDragging] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [mergedResult, setMergedResult] = useState<{ name: string; pageCount: number } | null>(null);
+  const [apiError, setApiError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const addFiles = (incoming: FileList) => {
     const pdfs: PdfFile[] = Array.from(incoming)
-      .filter((f) => f.type.includes("pdf"))
+      .filter((f) => f.type.includes("pdf") || f.name.toLowerCase().endsWith(".pdf"))
       .map((f) => ({ id: crypto.randomUUID(), name: f.name, size: f.size, file: f }));
     setFiles((prev) => [...prev, ...pdfs]);
+    setMergedResult(null);
+    setApiError("");
   };
 
   const remove = (id: string) => setFiles((prev) => prev.filter((f) => f.id !== id));
@@ -35,15 +62,61 @@ export default function MergePage() {
   const formatBytes = (b: number) =>
     b > 1_000_000 ? `${(b / 1_000_000).toFixed(1)} MB` : `${Math.round(b / 1000)} KB`;
 
+  const handleAssemble = async () => {
+    if (files.length < 2) return;
+    setProcessing(true);
+    setApiError("");
+    setMergedResult(null);
+
+    try {
+      const formData = new FormData();
+      files.forEach((f) => formData.append("files", f.file));
+
+      const res = await fetch("/api/merge", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setApiError(data.error ?? "Merge failed. Please try again.");
+        return;
+      }
+
+      // Download the merged PDF
+      downloadBase64Pdf(data.data, data.name ?? "merged.pdf");
+      setMergedResult({ name: data.name ?? "merged.pdf", pageCount: data.pageCount });
+
+      // Redirect to workspace with success highlight
+      const returnTo = fromFile
+        ? `/workspace?file=${encodeURIComponent(fromFile)}&highlight=merge-complete`
+        : `/workspace?highlight=merge-complete`;
+
+      setTimeout(() => router.push(returnTo), 1200);
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : "Network error — please try again.");
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   return (
     <div className="min-h-screen flex flex-col bg-tool-hero">
       {/* ── Top bar ── */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-800/60">
-        <a href="/" className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors text-sm">
-          <ArrowLeft size={14} />
-          DocCraft
-        </a>
-        <span className="text-slate-700">/</span>
+        {fromFile ? (
+          <>
+            <a href="/" className="text-slate-500 hover:text-slate-300 transition-colors text-sm">Workspaces</a>
+            <span className="text-slate-700">/</span>
+            <a href={`/workspace?file=${encodeURIComponent(fromFile)}`} className="text-slate-500 hover:text-slate-300 transition-colors text-sm truncate max-w-[160px]">{fromFile}</a>
+            <span className="text-slate-700">/</span>
+          </>
+        ) : (
+          <>
+            <a href="/" className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors text-sm">
+              <ArrowLeft size={14} />
+              DocCraft
+            </a>
+            <span className="text-slate-700">/</span>
+          </>
+        )}
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-purple-600/20 border border-purple-500/30 flex items-center justify-center">
             <Layers size={11} className="text-purple-400" />
@@ -107,7 +180,7 @@ export default function MergePage() {
               <div className="grid grid-cols-2 gap-3 mt-6">
                 {[
                   { icon: GripVertical, title: "Drag to reorder", desc: "Set page sequence before merge" },
-                  { icon: Zap, title: "Instant assembly", desc: "No server upload needed" },
+                  { icon: Zap, title: "Instant assembly", desc: "pdf-lib — runs in seconds" },
                 ].map((item) => (
                   <div key={item.title} className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-800 bg-slate-900/40">
                     <item.icon size={13} className="text-purple-400 mt-0.5 shrink-0" />
@@ -135,7 +208,8 @@ export default function MergePage() {
                 <button
                   type="button"
                   onClick={() => inputRef.current?.click()}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 border border-slate-700 hover:bg-slate-800 hover:text-slate-200 transition-colors"
+                  disabled={processing}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 border border-slate-700 hover:bg-slate-800 hover:text-slate-200 transition-colors disabled:opacity-50"
                 >
                   <Upload size={11} />
                   Add more
@@ -164,18 +238,16 @@ export default function MergePage() {
                         onClick={() => move(i, i - 1)}
                         className="text-slate-700 hover:text-slate-400 transition-colors text-[10px] leading-none"
                         title="Move up"
-                      >
-                        ▲
-                      </button>
+                        disabled={processing}
+                      >▲</button>
                       <GripVertical className="w-3.5 h-3.5 text-slate-700" />
                       <button
                         type="button"
                         onClick={() => move(i, i + 1)}
                         className="text-slate-700 hover:text-slate-400 transition-colors text-[10px] leading-none"
                         title="Move down"
-                      >
-                        ▼
-                      </button>
+                        disabled={processing}
+                      >▼</button>
                     </div>
                     <span className="text-xs font-mono text-slate-600 w-5 text-center">{i + 1}</span>
                     <div className="w-8 h-8 rounded-lg bg-purple-600/15 border border-purple-500/25 flex items-center justify-center shrink-0">
@@ -189,7 +261,8 @@ export default function MergePage() {
                       type="button"
                       title="Remove"
                       onClick={() => remove(f.id)}
-                      className="text-slate-600 hover:text-slate-300 transition-colors opacity-0 group-hover:opacity-100"
+                      disabled={processing}
+                      className="text-slate-600 hover:text-slate-300 transition-colors opacity-0 group-hover:opacity-100 disabled:pointer-events-none"
                     >
                       <X size={14} />
                     </button>
@@ -197,30 +270,64 @@ export default function MergePage() {
                 ))}
               </div>
 
-              {/* Processing note */}
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/40 space-y-2">
-                <div className="flex items-center gap-2 text-purple-400/80">
-                  <Shield size={12} />
-                  <span className="font-semibold text-xs uppercase tracking-wider">Local Browser Processing</span>
+              {/* Error */}
+              {apiError && (
+                <div className="flex items-start gap-2.5 p-3 rounded-xl border border-red-800/50 bg-red-950/30">
+                  <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-300">{apiError}</p>
                 </div>
-                <p className="text-xs leading-relaxed text-slate-500">
-                  Connect to <code className="text-slate-400">/api/merge</code> with <code className="text-slate-400">pdf-lib</code> to perform the merge. File order, upload handling, and UI are fully wired.
-                </p>
-              </div>
+              )}
+
+              {/* Success */}
+              {mergedResult && (
+                <div className="flex items-center gap-3 p-3 rounded-xl border border-violet-700/40 bg-violet-950/30">
+                  <CheckCircle2 size={14} className="text-violet-400 shrink-0" />
+                  <div>
+                    <p className="text-xs font-semibold text-violet-300">
+                      Merged PDF downloaded ({mergedResult.pageCount} pages) — redirecting…
+                    </p>
+                    <p className="text-[10px] text-violet-500 mt-0.5 flex items-center gap-1">
+                      <Download size={9} /> {mergedResult.name}
+                    </p>
+                  </div>
+                </div>
+              )}
 
               <button
                 type="button"
-                className="w-full flex items-center gap-2 px-5 py-3 rounded-xl bg-purple-700 hover:bg-purple-600 text-white text-sm font-semibold transition-colors shadow-lg shadow-purple-900/30"
-                onClick={() => alert(`Connect to /api/merge to process ${files.length} files.`)}
+                className="w-full flex items-center gap-2 px-5 py-3 rounded-xl bg-purple-700 hover:bg-purple-600 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors shadow-lg shadow-purple-900/30"
+                onClick={handleAssemble}
+                disabled={processing || files.length < 2}
               >
-                <Layers size={15} />
-                Assemble {files.length} PDF{files.length > 1 ? "s" : ""}
-                <ChevronRight size={15} className="ml-auto" />
+                {processing ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    Assembling PDFs…
+                  </>
+                ) : (
+                  <>
+                    <Layers size={15} />
+                    Assemble {files.length} PDF{files.length > 1 ? "s" : ""}
+                    <ChevronRight size={15} className="ml-auto" />
+                  </>
+                )}
               </button>
+
+              {files.length < 2 && (
+                <p className="text-center text-xs text-slate-600">Add at least 2 PDFs to enable assembly</p>
+              )}
             </div>
           )}
         </div>
       </div>
     </div>
+  );
+}
+
+export default function MergePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-tool-hero flex items-center justify-center text-slate-500 text-sm">Loading…</div>}>
+      <MergeInner />
+    </Suspense>
   );
 }

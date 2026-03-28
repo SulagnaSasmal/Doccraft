@@ -106,6 +106,23 @@ export default function Home() {
     return () => window.removeEventListener("keydown", handler);
   }, []);
 
+  // ── OCR handoff: pre-load text extracted by /ocr page ──────────────────
+  useEffect(() => {
+    const ocrText = sessionStorage.getItem("doccraft_ocr_text");
+    const ocrFiles = sessionStorage.getItem("doccraft_ocr_files");
+    if (ocrText) {
+      setUploadedContent(ocrText);
+      try {
+        const names: string[] = ocrFiles ? JSON.parse(ocrFiles) : [];
+        setFileNames(names.length ? names : ["ocr-extracted.txt"]);
+      } catch {
+        setFileNames(["ocr-extracted.txt"]);
+      }
+      sessionStorage.removeItem("doccraft_ocr_text");
+      sessionStorage.removeItem("doccraft_ocr_files");
+    }
+  }, []);
+
   useEffect(() => {
     // Restore session on mount
     supabase.auth.getSession().then(({ data: { session } }) => {

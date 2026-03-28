@@ -2,7 +2,10 @@
 
 import { Suspense, useState, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Scissors, Upload, FileText, X, ChevronRight, ArrowLeft, Shield, Zap } from "lucide-react";
+import {
+  Scissors, Upload, FileText, X, ChevronRight, ArrowLeft,
+  Shield, Zap, Loader2, CheckCircle2, AlertCircle, Download,
+} from "lucide-react";
 
 interface PdfFile {
   name: string;
@@ -10,19 +13,44 @@ interface PdfFile {
   file: File;
 }
 
+interface SplitResult {
+  name: string;
+  data: string; // base64
+  pages: number;
+}
+
+function downloadBase64Pdf(base64: string, filename: string) {
+  const binary = atob(base64);
+  const bytes = new Uint8Array(binary.length);
+  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+  const blob = new Blob([bytes], { type: "application/pdf" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
 function SplitInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const fromFile = searchParams.get("from");
+
   const [pdfFile, setPdfFile] = useState<PdfFile | null>(null);
   const [rangeInput, setRangeInput] = useState("");
   const [dragging, setDragging] = useState(false);
+  const [processing, setProcessing] = useState(false);
+  const [results, setResults] = useState<SplitResult[] | null>(null);
+  const [apiError, setApiError] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
 
   const handleFile = (f: File) => {
-    if (!f.type.includes("pdf")) return;
+    if (!f.type.includes("pdf") && !f.name.toLowerCase().endsWith(".pdf")) return;
     setPdfFile({ name: f.name, size: f.size, file: f });
     setRangeInput("");
+    setResults(null);
+    setApiError("");
   };
 
   const handleDrop = (e: React.DragEvent) => {
@@ -34,6 +62,44 @@ function SplitInner() {
 
   const formatBytes = (b: number) =>
     b > 1_000_000 ? `${(b / 1_000_000).toFixed(1)} MB` : `${Math.round(b / 1000)} KB`;
+
+  const handleAtomicize = async () => {
+    if (!pdfFile) return;
+    setProcessing(true);
+    setApiError("");
+    setResults(null);
+
+    try {
+      const formData = new FormData();
+      formData.append("file", pdfFile.file);
+      formData.append("ranges", rangeInput.trim());
+
+      const res = await fetch("/api/split", { method: "POST", body: formData });
+      const data = await res.json();
+
+      if (!res.ok) {
+        setApiError(data.error ?? "Split failed. Please try again.");
+        return;
+      }
+
+      const files: SplitResult[] = data.files;
+      setResults(files);
+
+      // Auto-download all split files
+      files.forEach((f) => downloadBase64Pdf(f.data, f.name));
+
+      // Redirect back to workspace with success highlight after a moment
+      const returnTo = fromFile
+        ? `/workspace?file=${encodeURIComponent(fromFile)}&highlight=split-complete`
+        : `/workspace?highlight=split-complete`;
+
+      setTimeout(() => router.push(returnTo), 1200);
+    } catch (err: unknown) {
+      setApiError(err instanceof Error ? err.message : "Network error — please try again.");
+    } finally {
+      setProcessing(false);
+    }
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-tool-hero">
@@ -61,7 +127,6 @@ function SplitInner() {
           </div>
           <span className="text-sm font-semibold text-slate-300">Content Atomicizer</span>
         </div>
-        {/* Compliance badge */}
         <div className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-600/10 border border-emerald-500/20">
           <Shield size={10} className="text-emerald-400" />
           <span className="text-[0.65rem] font-medium text-emerald-300">Local Processing — No Upload to Servers</span>
@@ -118,7 +183,7 @@ function SplitInner() {
               <div className="grid grid-cols-2 gap-3 mt-6">
                 {[
                   { icon: Scissors, title: "Page ranges", desc: "e.g. 1-3, 5, 7-9" },
-                  { icon: Zap, title: "Instant split", desc: "No server upload needed" },
+                  { icon: Zap, title: "Instant split", desc: "pdf-lib — runs in seconds" },
                 ].map((item) => (
                   <div key={item.title} className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-800 bg-slate-900/40">
                     <item.icon size={13} className="text-blue-400 mt-0.5 shrink-0" />
@@ -155,8 +220,9 @@ function SplitInner() {
                 <button
                   type="button"
                   title="Remove file"
-                  onClick={() => setPdfFile(null)}
+                  onClick={() => { setPdfFile(null); setResults(null); setApiError(""); }}
                   className="text-slate-500 hover:text-slate-300 transition-colors"
+                  disabled={processing}
                 >
                   <X size={15} />
                 </button>
@@ -172,38 +238,64 @@ function SplitInner() {
                   placeholder="e.g. 1-3, 5, 7-9  (leave blank for all pages)"
                   value={rangeInput}
                   onChange={(e) => setRangeInput(e.target.value)}
-                  className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30"
+                  disabled={processing}
+                  className="w-full bg-slate-800/60 border border-slate-700 rounded-xl px-4 py-2.5 text-sm text-slate-200 placeholder-slate-600 focus:outline-none focus:border-blue-500/60 focus:ring-1 focus:ring-blue-500/30 disabled:opacity-50"
                 />
                 <p className="text-[11px] text-slate-600">
                   Specify ranges like <code className="text-slate-500">1-3, 5, 8-10</code> to extract those pages as separate files. Leave blank to split every page individually.
                 </p>
               </div>
 
-              {/* Processing note */}
-              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/40 space-y-2">
-                <div className="flex items-center gap-2 text-blue-400/80">
-                  <Shield size={12} />
-                  <span className="font-semibold text-xs uppercase tracking-wider">Local Browser Processing</span>
+              {/* Error */}
+              {apiError && (
+                <div className="flex items-start gap-2.5 p-3 rounded-xl border border-red-800/50 bg-red-950/30">
+                  <AlertCircle size={14} className="text-red-400 shrink-0 mt-0.5" />
+                  <p className="text-xs text-red-300">{apiError}</p>
                 </div>
-                <p className="text-xs leading-relaxed text-slate-500">
-                  Connect this page to the <code className="text-slate-400">/api/split</code> endpoint with <code className="text-slate-400">pdf-lib</code> to enable real extraction. The UI, file handling, and range parsing are fully wired.
-                </p>
-              </div>
+              )}
+
+              {/* Success */}
+              {results && (
+                <div className="p-4 rounded-xl border border-emerald-700/40 bg-emerald-950/30 space-y-2">
+                  <div className="flex items-center gap-2 text-emerald-400">
+                    <CheckCircle2 size={14} />
+                    <span className="text-xs font-semibold">
+                      {results.length} file{results.length > 1 ? "s" : ""} downloaded — redirecting to workspace…
+                    </span>
+                  </div>
+                  <div className="space-y-1 mt-1">
+                    {results.slice(0, 6).map((r) => (
+                      <div key={r.name} className="flex items-center gap-2">
+                        <Download size={10} className="text-emerald-500 shrink-0" />
+                        <span className="text-[11px] text-emerald-300/80 truncate">{r.name}</span>
+                        <span className="text-[10px] text-emerald-600 ml-auto shrink-0">{r.pages}p</span>
+                      </div>
+                    ))}
+                    {results.length > 6 && (
+                      <p className="text-[10px] text-emerald-600">+{results.length - 6} more files</p>
+                    )}
+                  </div>
+                </div>
+              )}
 
               <button
                 type="button"
-                className="w-full flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors shadow-lg shadow-blue-900/30"
-                onClick={() => {
-                  // TODO: connect to /api/split with pdf-lib — file and rangeInput are ready
-                  const returnTo = fromFile
-                    ? `/workspace?file=${encodeURIComponent(fromFile)}&highlight=split-complete`
-                    : `/workspace?highlight=split-complete`;
-                  router.push(returnTo);
-                }}
+                className="w-full flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 disabled:opacity-60 disabled:cursor-not-allowed text-white text-sm font-semibold transition-colors shadow-lg shadow-blue-900/30"
+                onClick={handleAtomicize}
+                disabled={processing}
               >
-                <Scissors size={15} />
-                Atomicize PDF
-                <ChevronRight size={15} className="ml-auto" />
+                {processing ? (
+                  <>
+                    <Loader2 size={15} className="animate-spin" />
+                    Splitting PDF…
+                  </>
+                ) : (
+                  <>
+                    <Scissors size={15} />
+                    Atomicize PDF
+                    <ChevronRight size={15} className="ml-auto" />
+                  </>
+                )}
               </button>
             </div>
           )}
