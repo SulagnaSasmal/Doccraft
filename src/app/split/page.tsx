@@ -1,6 +1,7 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { Suspense, useState, useRef } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Scissors, Upload, FileText, X, ChevronRight, ArrowLeft, Shield, Zap } from "lucide-react";
 
 interface PdfFile {
@@ -9,7 +10,10 @@ interface PdfFile {
   file: File;
 }
 
-export default function SplitPage() {
+function SplitInner() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromFile = searchParams.get("from");
   const [pdfFile, setPdfFile] = useState<PdfFile | null>(null);
   const [rangeInput, setRangeInput] = useState("");
   const [dragging, setDragging] = useState(false);
@@ -35,11 +39,22 @@ export default function SplitPage() {
     <div className="min-h-screen flex flex-col bg-tool-hero">
       {/* ── Top bar ── */}
       <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-800/60">
-        <a href="/" className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors text-sm">
-          <ArrowLeft size={14} />
-          DocCraft
-        </a>
-        <span className="text-slate-700">/</span>
+        {fromFile ? (
+          <>
+            <a href="/" className="text-slate-500 hover:text-slate-300 transition-colors text-sm">Workspaces</a>
+            <span className="text-slate-700">/</span>
+            <a href={`/workspace?file=${encodeURIComponent(fromFile)}`} className="text-slate-500 hover:text-slate-300 transition-colors text-sm truncate max-w-[160px]">{fromFile}</a>
+            <span className="text-slate-700">/</span>
+          </>
+        ) : (
+          <>
+            <a href="/" className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors text-sm">
+              <ArrowLeft size={14} />
+              DocCraft
+            </a>
+            <span className="text-slate-700">/</span>
+          </>
+        )}
         <div className="flex items-center gap-2">
           <div className="w-6 h-6 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center">
             <Scissors size={11} className="text-blue-400" />
@@ -178,7 +193,13 @@ export default function SplitPage() {
               <button
                 type="button"
                 className="w-full flex items-center gap-2 px-5 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-sm font-semibold transition-colors shadow-lg shadow-blue-900/30"
-                onClick={() => alert("Connect to /api/split to process. File and range are ready.")}
+                onClick={() => {
+                  // TODO: connect to /api/split with pdf-lib — file and rangeInput are ready
+                  const returnTo = fromFile
+                    ? `/workspace?file=${encodeURIComponent(fromFile)}&highlight=split-complete`
+                    : `/workspace?highlight=split-complete`;
+                  router.push(returnTo);
+                }}
               >
                 <Scissors size={15} />
                 Atomicize PDF
@@ -189,5 +210,13 @@ export default function SplitPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SplitPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-tool-hero flex items-center justify-center text-slate-500 text-sm">Loading…</div>}>
+      <SplitInner />
+    </Suspense>
   );
 }

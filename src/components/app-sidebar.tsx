@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import {
   FileText,
   LayoutDashboard,
@@ -121,7 +122,7 @@ export function AppSidebar() {
             <SidebarMenu>
               <SidebarMenuItem>
                 <SidebarMenuButton
-                  render={<a href="/" aria-label="Command Center" />}
+                  render={<Link href="/" aria-label="Command Center" />}
                   className="hover:bg-slate-900 text-slate-300 hover:text-white transition-all"
                 >
                   <LayoutDashboard className="w-4 h-4" />
@@ -138,16 +139,16 @@ export function AppSidebar() {
             <SidebarGroupLabel className="text-slate-500 text-[10px] font-bold uppercase tracking-widest">
               Help Center Docs
             </SidebarGroupLabel>
-            <a href="/workspace?file=index.html" title="Browse all docs">
+            <Link href="/workspace?file=index.html" title="Browse all docs">
               <PlusCircle className="w-3 h-3 text-slate-600 hover:text-blue-500 cursor-pointer transition-colors" />
-            </a>
+            </Link>
           </div>
           <SidebarGroupContent>
             <SidebarMenu>
               {workspaces.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    render={<a href={item.url} aria-label={item.title} />}
+                    render={<Link href={item.url} aria-label={item.title} />}
                     className="group hover:bg-slate-900 text-slate-400 hover:text-white transition-all"
                   >
                     <item.icon className="w-4 h-4 opacity-70 group-hover:text-blue-400 shrink-0" />
@@ -175,7 +176,7 @@ export function AppSidebar() {
               {toolkit.map((item) => (
                 <SidebarMenuItem key={item.title}>
                   <SidebarMenuButton
-                    render={<a href={item.url} aria-label={item.title} />}
+                    render={<Link href={item.url} aria-label={item.title} />}
                     className="hover:bg-slate-900 border border-transparent hover:border-slate-800 rounded-lg transition-all"
                   >
                     <item.icon className={`w-4 h-4 ${item.accent}`} />
