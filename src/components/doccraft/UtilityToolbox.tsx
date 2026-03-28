@@ -538,29 +538,31 @@ export default function UtilityToolbox({
             </div>
           )}
 
-          {/* ── Analyze CTA ──────────────────────────────── */}
-          <button
-            type="button"
-            onClick={onAnalyze}
-            disabled={!uploadedContent.trim() || isAnalyzing}
-            className="w-full py-2.5 px-4 bg-blue-600 text-white font-semibold rounded-xl
-                       hover:bg-blue-700 active:scale-[0.98] transition-all duration-150
-                       disabled:opacity-40 disabled:cursor-not-allowed
-                       shadow-lg shadow-blue-900/30 text-[0.82rem] tracking-wide"
-          >
-            {isAnalyzing ? (
-              <span className="flex items-center justify-center gap-2">
-                <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Analyzing…
-              </span>
-            ) : (
-              "Analyze & Identify Gaps"
-            )}
-          </button>
-
-          <div className="pb-2" />
+          <div className="pb-1" />
         </div>
       </ScrollArea>
+
+      {/* ── Sticky Analyze CTA ───────────────────────── */}
+      <div className="px-3 py-3 border-t border-slate-800/60 bg-slate-950/95 shrink-0">
+        <button
+          type="button"
+          onClick={onAnalyze}
+          disabled={!uploadedContent.trim() || isAnalyzing}
+          className="w-full py-2.5 px-4 bg-blue-600 text-white font-semibold rounded-xl
+                     hover:bg-blue-700 active:scale-[0.98] transition-all duration-150
+                     disabled:opacity-40 disabled:cursor-not-allowed
+                     shadow-lg shadow-blue-900/30 text-[0.82rem] tracking-wide"
+        >
+          {isAnalyzing ? (
+            <span className="flex items-center justify-center gap-2">
+              <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              Analyzing…
+            </span>
+          ) : (
+            "Analyze & Identify Gaps"
+          )}
+        </button>
+      </div>
     </aside>
   );
 }

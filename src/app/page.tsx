@@ -60,11 +60,14 @@ export default function Home() {
   const [stage, setStage] = useState<AppStage>("upload");
   const [uploadedContent, setUploadedContent] = useState("");
   const [fileNames, setFileNames] = useState<string[]>([]);
-  const [config, setConfig] = useState<DocConfig>({
-    docType: "user-guide",
-    audience: "non-technical",
-    tone: "conversational",
-    customInstructions: "",
+  const [config, setConfig] = useState<DocConfig>(() => {
+    const defaults: DocConfig = { docType: "user-guide", audience: "non-technical", tone: "conversational", customInstructions: "" };
+    if (typeof window === "undefined") return defaults;
+    try {
+      const saved = localStorage.getItem("doccraft_config");
+      if (saved) return { ...defaults, ...JSON.parse(saved) };
+    } catch {}
+    return defaults;
   });
   const [contextText, setContextText] = useState("");
   const [glossaryData, setGlossaryData] = useState<GlossaryData | null>(null);
@@ -127,6 +130,11 @@ export default function Home() {
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
   }, []);
+
+  // Persist config to localStorage on every change
+  useEffect(() => {
+    try { localStorage.setItem("doccraft_config", JSON.stringify(config)); } catch {}
+  }, [config]);
 
   // ── OCR handoff: pre-load text extracted by /ocr page ──────────────────
   useEffect(() => {
@@ -497,6 +505,13 @@ export default function Home() {
 
   const wordCount = uploadedContent ? uploadedContent.trim().split(/\s+/).filter(Boolean).length : 0;
   const estimatedPages = Math.ceil(wordCount / 250) || 0;
+  const headingCount = uploadedContent ? (uploadedContent.match(/^#{1,6}\s/gm) ?? []).length : 0;
+  const readingTimeMin = Math.max(1, Math.round(wordCount / 200));
+  const contentSignals: string[] = uploadedContent ? [
+    /```/.test(uploadedContent) ? "Code" : null,
+    /^\|.+\|/m.test(uploadedContent) ? "Tables" : null,
+    /^\d+\.\s/m.test(uploadedContent) ? "Steps" : null,
+  ].filter(Boolean) as string[] : [];
 
   return (
     <div
@@ -670,11 +685,24 @@ export default function Home() {
                         <p className="text-[0.8rem] font-semibold text-blue-300 mb-1">
                           DocCraft has read your source material
                         </p>
-                        <p className="text-[0.72rem] text-slate-400 mb-3">
+                        <p className="text-[0.72rem] text-slate-400 mb-2">
                           {fileNames.length} file{fileNames.length > 1 ? "s" : ""} loaded &middot;{" "}
                           ~{wordCount.toLocaleString()} words &middot;{" "}
                           ~{estimatedPages} page{estimatedPages !== 1 ? "s" : ""}
                         </p>
+                        <div className="flex flex-wrap gap-1.5 mb-3">
+                          <span className="px-2 py-0.5 rounded-md bg-slate-800/60 border border-slate-700/40 text-[0.62rem] text-slate-400">
+                            {headingCount} section{headingCount !== 1 ? "s" : ""}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-slate-800/60 border border-slate-700/40 text-[0.62rem] text-slate-400">
+                            ~{readingTimeMin} min read
+                          </span>
+                          {contentSignals.map((s) => (
+                            <span key={s} className="px-2 py-0.5 rounded-md bg-blue-600/10 border border-blue-700/30 text-[0.62rem] text-blue-400">
+                              {s}
+                            </span>
+                          ))}
+                        </div>
                         {recommendation && !recDismissed ? (
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[0.72rem] text-slate-300">Suggested output:</span>
@@ -815,6 +843,34 @@ export default function Home() {
             </h2>
           </div>
           <div className="flex-1 overflow-auto px-3 py-3 space-y-3">
+
+            {/* Empty state — shown until content is loaded */}
+            {stage === "upload" && fileNames.length === 0 && (
+              <div className="px-3 py-3 bg-slate-800/20 border border-dashed border-slate-700/40 rounded-xl">
+                <div className="flex flex-col items-center text-center gap-1.5 py-1">
+                  <div className="w-7 h-7 rounded-xl bg-slate-700/30 flex items-center justify-center">
+                    <Sparkles size={13} className="text-slate-500" />
+                  </div>
+                  <p className="text-[0.7rem] font-semibold text-slate-400">Results appear here</p>
+                  <p className="text-[0.62rem] text-slate-600 leading-relaxed">
+                    Compliance checks, linting, and publish actions show up after generation.
+                  </p>
+                  <div className="flex flex-col gap-1.5 w-full mt-1 text-left">
+                    {[
+                      { step: "1. Upload source material", active: true },
+                      { step: "2. Configure output type", active: false },
+                      { step: "3. Analyze & generate", active: false },
+                      { step: "4. Review & publish", active: false },
+                    ].map(({ step, active }) => (
+                      <div key={step} className="flex items-center gap-1.5">
+                        <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${active ? "bg-blue-500" : "bg-slate-700"}`} />
+                        <span className={`text-[0.6rem] ${active ? "text-slate-400" : "text-slate-600"}`}>{step}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Auth nudge */}
             {!user && (

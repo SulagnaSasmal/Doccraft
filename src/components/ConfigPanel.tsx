@@ -43,25 +43,34 @@ export default function ConfigPanel({
       <div className="p-5 space-y-4">
         {/* Document Type */}
         <div className="bg-surface-1 rounded-xl p-4 border border-surface-2">
-          <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-1 mb-2 uppercase tracking-wider">
             <FileType2 size={13} className="text-brand-500" />
             Document Type
           </label>
-          <select
-            value={config.docType}
-            onChange={(e) => update("docType", e.target.value)}
-            className="w-full px-3 py-2 rounded-lg border border-surface-3 bg-surface-0 text-sm text-ink-0
-                       focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 transition-all"
-          >
+          <div className="space-y-1.5">
             {DOC_TYPES.map((t) => (
-              <option key={t.value} value={t.value}>
-                {t.label}
-              </option>
+              <button
+                key={t.value}
+                type="button"
+                onClick={() => update("docType", t.value)}
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
+                  config.docType === t.value
+                    ? "bg-brand-700 text-white shadow-sm"
+                    : "bg-surface-0 text-ink-2 hover:bg-surface-2 border border-surface-3"
+                }`}
+              >
+                <span className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 transition-colors ${
+                  config.docType === t.value ? "bg-white border-white" : "border-ink-3"
+                }`} />
+                <div className="flex flex-col min-w-0">
+                  <span>{t.label}</span>
+                  <span className={`text-[0.62rem] font-normal leading-tight mt-0.5 ${
+                    config.docType === t.value ? "text-white/70" : "text-ink-4"
+                  }`}>{t.desc}</span>
+                </div>
+              </button>
             ))}
-          </select>
-          <p className="text-[0.7rem] text-ink-3 mt-1">
-            {DOC_TYPES.find((t) => t.value === config.docType)?.desc}
-          </p>
+          </div>
         </div>
 
         {/* Audience */}
@@ -85,10 +94,12 @@ export default function ConfigPanel({
                 <span className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 transition-colors ${
                   config.audience === a.value ? "bg-white border-white" : "border-ink-3"
                 }`} />
-                <span className="flex-1">{a.label}</span>
-                <span className={`text-[0.62rem] shrink-0 ${
-                  config.audience === a.value ? "text-white/70" : "text-ink-4"
-                }`}>{a.desc}</span>
+                <div className="flex flex-col min-w-0">
+                  <span>{a.label}</span>
+                  <span className={`text-[0.62rem] font-normal leading-tight mt-0.5 ${
+                    config.audience === a.value ? "text-white/70" : "text-ink-4"
+                  }`}>{a.desc}</span>
+                </div>
               </button>
             ))}
           </div>
@@ -115,10 +126,12 @@ export default function ConfigPanel({
                 <span className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 transition-colors ${
                   config.tone === t.value ? "bg-white border-white" : "border-ink-3"
                 }`} />
-                <span className="flex-1">{t.label}</span>
-                <span className={`text-[0.62rem] shrink-0 ${
-                  config.tone === t.value ? "text-white/70" : "text-ink-4"
-                }`}>{t.desc}</span>
+                <div className="flex flex-col min-w-0">
+                  <span>{t.label}</span>
+                  <span className={`text-[0.62rem] font-normal leading-tight mt-0.5 ${
+                    config.tone === t.value ? "text-white/70" : "text-ink-4"
+                  }`}>{t.desc}</span>
+                </div>
               </button>
             ))}
           </div>
