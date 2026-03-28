@@ -1,156 +1,201 @@
 "use client";
 
-import { useState } from "react";
-import { ImageIcon, Loader2, Download, RefreshCw, X } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { BarChart2, Loader2, Copy, Check, Plus, RefreshCw, X, ChevronRight } from "lucide-react";
 import { safeResJson } from "@/lib/safeResJson";
 
-const STYLES = [
-  { key: "summary",   label: "Summary Grid",  desc: "Structured info graphic with sections" },
-  { key: "flowchart", label: "Flowchart",      desc: "Process diagram with directional arrows" },
-  { key: "concept",   label: "Concept Map",   desc: "Central topic with satellite nodes" },
-  { key: "timeline",  label: "Timeline",      desc: "Horizontal milestone timeline" },
+const VISUAL_TYPES = [
+  { key: "mindmap",   label: "Mind Map",  desc: "Topic hierarchy & relationships" },
+  { key: "timeline",  label: "Timeline",  desc: "Phases, steps & milestones" },
+  { key: "flowchart", label: "Flowchart", desc: "Process flow & decisions" },
+  { key: "pie",       label: "Pie Chart", desc: "Topic / component distribution" },
 ];
 
 export default function InfographicPanel({
   content,
+  onInsert,
   onClose,
 }: {
   content: string;
+  onInsert?: (mermaidBlock: string) => void;
   onClose: () => void;
 }) {
-  const [style, setStyle] = useState("summary");
-  const [imageUrl, setImageUrl] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
+  const [style, setStyle]             = useState("mindmap");
+  const [mermaidCode, setMermaidCode] = useState("");
+  const [loading, setLoading]         = useState(false);
+  const [error, setError]             = useState("");
+  const [copied, setCopied]           = useState(false);
+  const [renderError, setRenderError] = useState("");
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const generate = async () => {
+  const generate = async (type = style) => {
     setLoading(true);
     setError("");
-    setImageUrl(null);
-
+    setMermaidCode("");
+    setRenderError("");
     try {
       const res = await fetch("/api/infographic", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ content, style }),
+        body: JSON.stringify({ content, style: type }),
       });
-
       const data = await safeResJson(res);
-      if (!res.ok) {
-        throw new Error(data.error || "Infographic generation failed");
-      }
-      setImageUrl(data.url);
+      if (!res.ok) throw new Error(data.error || "Visual generation failed");
+      setMermaidCode(data.mermaid);
     } catch (err: any) {
-      setError(err.message || "Failed to generate infographic");
+      setError(err.message || "Generation failed");
     } finally {
       setLoading(false);
     }
   };
 
-  const downloadImage = async () => {
-    if (!imageUrl) return;
-    try {
-      const res = await fetch(imageUrl);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `doccraft-infographic-${Date.now()}.png`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      // fallback — open in new tab
-      window.open(imageUrl, "_blank");
-    }
+  // Auto-generate on mount
+  useEffect(() => {
+    generate();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Re-render whenever Mermaid code changes
+  useEffect(() => {
+    if (!mermaidCode || !containerRef.current) return;
+    setRenderError("");
+    const render = async () => {
+      try {
+        const mermaid = (await import("mermaid")).default;
+        mermaid.initialize({ startOnLoad: false, theme: "neutral", securityLevel: "loose" });
+        const id = `dc-visual-${Date.now()}`;
+        const { svg } = await mermaid.render(id, mermaidCode);
+        if (containerRef.current) containerRef.current.innerHTML = svg;
+      } catch {
+        setRenderError("Diagram syntax error — try regenerating");
+      }
+    };
+    render();
+  }, [mermaidCode]);
+
+  const handleTypeChange = (type: string) => {
+    setStyle(type);
+    generate(type);
+  };
+
+  const copyCode = async () => {
+    await navigator.clipboard.writeText(mermaidCode);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const insertIntoDoc = () => {
+    onInsert?.(`\n\n\`\`\`mermaid\n${mermaidCode}\n\`\`\`\n\n`);
+    onClose();
   };
 
   return (
-    <div className="border border-surface-3 rounded-2xl bg-surface-0 shadow-card overflow-hidden">
+    <div className="border border-surface-3 rounded-2xl bg-surface-0 shadow-card overflow-hidden animate-fade-in-up">
       {/* Header */}
-      <div className="flex items-center justify-between px-5 py-3 border-b border-surface-2 bg-surface-1">
+      <div className="flex items-center justify-between px-5 py-3 border-b border-surface-2">
         <div className="flex items-center gap-2">
-          <ImageIcon size={15} className="text-brand-600" />
-          <span className="text-sm font-semibold text-ink-0">DALL-E Infographic</span>
+          <BarChart2 size={15} className="text-brand-600" />
+          <span className="text-sm font-semibold text-ink-0">Visual Generator</span>
           <span className="text-[0.65rem] text-ink-4 font-medium uppercase tracking-wide bg-surface-2 px-2 py-0.5 rounded-full">
-            Phase 3
+            Mermaid
           </span>
         </div>
-        <button onClick={onClose} className="text-ink-4 hover:text-ink-1 transition-colors">
+        <button onClick={onClose} className="text-ink-4 hover:text-ink-1 transition-colors" aria-label="Close">
           <X size={15} />
         </button>
       </div>
 
-      <div className="p-5">
-        {/* Style selector */}
-        <p className="text-xs font-medium text-ink-2 mb-2">Visual style</p>
-        <div className="grid grid-cols-2 gap-2 mb-4">
-          {STYLES.map((s) => (
+      <div className="p-4">
+        {/* Visual type selector */}
+        <div className="grid grid-cols-4 gap-1 mb-4 p-0.5 bg-surface-1 rounded-xl border border-surface-2">
+          {VISUAL_TYPES.map((t) => (
             <button
-              key={s.key}
-              onClick={() => setStyle(s.key)}
-              className={`text-left p-2.5 rounded-xl border text-xs transition-all ${
-                style === s.key
-                  ? "border-brand-400 bg-brand-50 text-brand-700"
-                  : "border-surface-3 text-ink-2 hover:border-brand-200 hover:bg-brand-50/40"
+              key={t.key}
+              onClick={() => handleTypeChange(t.key)}
+              disabled={loading}
+              title={t.desc}
+              className={`py-1.5 px-1 rounded-lg text-[0.68rem] font-medium transition-all disabled:opacity-50 ${
+                style === t.key
+                  ? "bg-surface-0 text-ink-0 shadow-sm"
+                  : "text-ink-3 hover:text-ink-1"
               }`}
             >
-              <span className="font-semibold block">{s.label}</span>
-              <span className="text-ink-4 leading-tight">{s.desc}</span>
+              {t.label}
             </button>
           ))}
         </div>
 
-        {/* Generate button */}
-        <button
-          onClick={generate}
-          disabled={loading}
-          className="w-full flex items-center justify-center gap-2 py-2.5 bg-brand-700 text-white text-sm font-semibold rounded-xl hover:bg-brand-800 transition-colors disabled:opacity-50"
-        >
-          {loading ? (
-            <>
-              <Loader2 size={14} className="animate-spin" />
-              Generating with DALL-E 3…
-            </>
-          ) : (
-            <>
-              <ImageIcon size={14} />
-              Generate Infographic
-            </>
-          )}
-        </button>
-
-        {error && (
-          <p className="mt-3 text-xs text-accent-red bg-red-50 border border-red-200 rounded-lg px-3 py-2">
-            {error}
-          </p>
+        {loading && (
+          <div className="flex items-center justify-center py-12 text-ink-3 gap-2">
+            <Loader2 size={18} className="animate-spin text-brand-500" />
+            <span className="text-sm">Generating…</span>
+          </div>
         )}
 
-        {/* Generated image */}
-        {imageUrl && (
-          <div className="mt-4">
-            <img
-              src={imageUrl}
-              alt="Generated documentation infographic"
-              className="w-full rounded-xl border border-surface-3 shadow-sm"
-            />
-            <div className="flex items-center gap-2 mt-3">
+        {!loading && error && (
+          <div className="py-8 text-center">
+            <p className="text-sm text-accent-red mb-3">{error}</p>
+            <button
+              onClick={() => generate()}
+              className="px-4 py-2 bg-brand-600 text-white text-xs font-medium rounded-lg hover:bg-brand-700 transition-colors"
+            >
+              Try Again
+            </button>
+          </div>
+        )}
+
+        {!loading && !error && mermaidCode && (
+          <div className="space-y-3">
+            {/* Rendered diagram */}
+            <div className="border border-surface-2 rounded-xl p-3 bg-surface-1 overflow-auto min-h-[120px]">
+              {renderError ? (
+                <p className="text-xs text-accent-red text-center py-6">{renderError}</p>
+              ) : (
+                <div ref={containerRef} className="flex justify-center [&>svg]:max-w-full" />
+              )}
+            </div>
+
+            {/* Mermaid source (collapsible) */}
+            <details className="group">
+              <summary className="text-xs text-ink-3 cursor-pointer hover:text-ink-1 transition-colors select-none list-none flex items-center gap-1">
+                <ChevronRight size={11} className="transition-transform group-open:rotate-90 shrink-0" />
+                View Mermaid source
+              </summary>
+              <pre className="mt-2 px-3 py-2.5 bg-surface-1 border border-surface-2 rounded-lg text-[0.68rem] font-mono text-ink-2 overflow-auto whitespace-pre-wrap">
+                {mermaidCode}
+              </pre>
+            </details>
+
+            {/* Actions */}
+            <div className="flex items-center gap-2 justify-end pt-1">
               <button
-                onClick={downloadImage}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-700 text-white text-xs font-semibold rounded-lg hover:bg-brand-800 transition-colors"
-              >
-                <Download size={12} />
-                Download PNG
-              </button>
-              <button
-                onClick={generate}
-                className="flex items-center gap-1.5 px-3 py-1.5 border border-surface-3 text-ink-2 text-xs font-medium rounded-lg hover:bg-surface-2 transition-colors"
+                onClick={() => generate()}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-ink-2
+                           hover:bg-surface-2 rounded-lg border border-surface-3 transition-colors"
               >
                 <RefreshCw size={12} />
                 Regenerate
               </button>
-              <p className="text-[0.65rem] text-ink-4 ml-1">
-                DALL-E 3 · 1792×1024
-              </p>
+              <button
+                onClick={copyCode}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-ink-2
+                           hover:bg-surface-2 rounded-lg border border-surface-3 transition-colors"
+              >
+                {copied ? <Check size={12} className="text-accent-green" /> : <Copy size={12} />}
+                {copied ? "Copied" : "Copy code"}
+              </button>
+              {onInsert && (
+                <button
+                  onClick={insertIntoDoc}
+                  disabled={!!renderError}
+                  className="flex items-center gap-1.5 px-3 py-1.5 bg-brand-700 text-white text-xs
+                             font-semibold rounded-lg hover:bg-brand-800 transition-colors shadow-sm
+                             disabled:opacity-40 disabled:cursor-not-allowed"
+                >
+                  <Plus size={12} />
+                  Insert into doc
+                </button>
+              )}
             </div>
           </div>
         )}

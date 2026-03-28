@@ -221,18 +221,29 @@ export default function GapAnalysis({
       </div>
 
       {/* Submit */}
-      <div className="mt-8 flex items-center justify-between pb-8">
-        <p className="text-xs text-ink-3">
-          Skipped questions will be marked with ⚠️ in the generated doc
-        </p>
-        <button
-          onClick={() => onSubmit(localQuestions)}
-          className="flex items-center gap-2 px-6 py-3 bg-brand-700 text-white font-semibold rounded-xl
-                     hover:bg-brand-800 active:scale-[0.98] transition-all shadow-md hover:shadow-lg text-sm"
-        >
-          Generate Documentation
-          <ArrowRight size={16} />
-        </button>
+      <div className="mt-8 pb-8 space-y-3">
+        <div className="flex items-center justify-between">
+          <p className="text-xs text-ink-3">
+            Skipped questions will be marked with ⚠️ in the generated doc
+          </p>
+          <button
+            onClick={() => onSubmit(localQuestions)}
+            className="flex items-center gap-2 px-6 py-3 bg-brand-700 text-white font-semibold rounded-xl
+                       hover:bg-brand-800 active:scale-[0.98] transition-all shadow-md hover:shadow-lg text-sm"
+          >
+            Generate Documentation
+            <ArrowRight size={16} />
+          </button>
+        </div>
+        <div className="flex justify-end">
+          <button
+            onClick={() => onSubmit(localQuestions.map((q) => ({ ...q, skipped: true, answer: "" })))}
+            className="text-[0.72rem] text-ink-3 hover:text-ink-1 transition-colors underline underline-offset-2"
+            title="Skip all questions and let the AI make reasonable assumptions"
+          >
+            Skip all & generate with AI assumptions →
+          </button>
+        </div>
       </div>
     </div>
   );

@@ -6,37 +6,46 @@ export const maxDuration = 30;
 
 const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
-function buildInfographicPrompt(docContent: string, style: string): string {
-  // Extract the first 1200 chars as the key conceptual content
-  const excerpt = docContent.slice(0, 1200).replace(/[#*`]/g, "").trim();
+const VISUAL_SYSTEM_PROMPTS: Record<string, string> = {
+  mindmap: `You are a diagram expert. Generate a Mermaid mindmap that visualizes the key concepts from the provided documentation.
+Rules:
+- Use mindmap syntax (starts with "mindmap")
+- Root node should be the main topic wrapped in double parens: root((Main Topic))
+- Add 4-6 top-level branches with 2-3 sub-nodes each
+- Keep all labels concise: 3-5 words max
+- Return ONLY valid Mermaid mindmap code, no explanation, no markdown fences`,
 
-  const styleGuide: Record<string, string> = {
-    flowchart:
-      "Clean flowchart/process diagram style, pastel backgrounds, rounded rectangles, clear directional arrows, minimal text, professional consulting aesthetic",
-    concept:
-      "Visual concept map style, central topic in the middle, satellite nodes connected by lines, color-coded categories, white background, clean sans-serif labels",
-    summary:
-      "Structured information graphic with sections, icon bullets, a title banner, clean grid layout, teal and amber accent colors, professional documentation style",
-    timeline:
-      "Horizontal timeline infographic, milestones as circles on a line, brief labels below each milestone, gradient accent, flat design",
-  };
+  timeline: `You are a diagram expert. Generate a Mermaid timeline showing the key phases, steps, or milestones from the provided documentation.
+Rules:
+- Use timeline syntax (starts with "timeline")
+- Include a title line
+- Organize into 2-4 sections using "section" keyword
+- Add 1-3 entries per section in format: Label : Short description
+- Keep labels concise
+- Return ONLY valid Mermaid timeline code, no explanation, no markdown fences`,
 
-  const styleDesc = styleGuide[style] || styleGuide.summary;
+  pie: `You are a diagram expert. Generate a Mermaid pie chart showing the distribution of topics, components, or concerns in the provided documentation.
+Rules:
+- Use pie syntax (starts with "pie title ...")
+- Include 4-7 slices
+- Values must be positive numbers (they will be normalized automatically, no need to sum to 100)
+- Format: "Label" : value
+- Labels should be concise (2-4 words)
+- Return ONLY valid Mermaid pie code, no explanation, no markdown fences`,
 
-  return `Create a professional documentation infographic visualizing the following technical content.
-Style: ${styleDesc}.
-Do NOT include any people, faces, or photorealistic elements.
-Do NOT include long blocks of text — use short labels (3-6 words max per element).
-The output should look like a professional technical writer created it for enterprise documentation.
-Content to visualize:
----
-${excerpt}
----`;
-}
+  flowchart: `You are a diagram expert. Generate a detailed Mermaid flowchart showing the main process, workflow, or decision tree from the provided documentation.
+Rules:
+- Use flowchart TD syntax
+- Include at least one decision diamond (e.g., Q{Decision?})
+- Use rectangles for processes, diamonds for decisions, rounded rects for start/end
+- Add clear directional arrows with optional labels
+- Keep node labels concise (3-6 words)
+- Return ONLY valid Mermaid flowchart code, no explanation, no markdown fences`,
+};
 
 export async function POST(req: NextRequest) {
   try {
-    const { content, style = "summary" } = await req.json();
+    const { content, style = "mindmap" } = await req.json();
     if (!content?.trim()) {
       return NextResponse.json({ error: "content is required" }, { status: 400 });
     }
@@ -45,25 +54,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "OPENAI_API_KEY not configured" }, { status: 500 });
     }
 
-    const prompt = buildInfographicPrompt(content, style);
+    const excerpt = content.slice(0, 2000).replace(/\r/g, "");
+    const systemPrompt = VISUAL_SYSTEM_PROMPTS[style] ?? VISUAL_SYSTEM_PROMPTS.mindmap;
 
-    const response = await openai.images.generate({
-      model: "dall-e-3",
-      prompt,
-      n: 1,
-      size: "1792x1024",
-      quality: "standard",
-      style: "natural",
+    const response = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Documentation content to visualize:\n\n${excerpt}` },
+      ],
+      max_tokens: 700,
+      temperature: 0.3,
     });
 
-    const url = response.data?.[0]?.url;
-    if (!url) throw new Error("No image returned");
+    let mermaid = response.choices[0]?.message?.content?.trim() ?? "";
+    // Strip markdown fences if the model wrapped the output
+    mermaid = mermaid.replace(/^```(?:mermaid)?\n?/i, "").replace(/\n?```\s*$/i, "").trim();
 
-    return NextResponse.json({ url, style });
+    if (!mermaid) throw new Error("No diagram generated");
+
+    return NextResponse.json({ mermaid, style });
   } catch (err: any) {
-    console.error("Infographic generation error:", err);
+    console.error("Visual generator error:", err);
     return NextResponse.json(
-      { error: err.message || "Infographic generation failed" },
+      { error: err.message || "Visual generation failed" },
       { status: 500 }
     );
   }

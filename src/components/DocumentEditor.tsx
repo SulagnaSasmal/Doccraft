@@ -90,6 +90,7 @@ export default function DocumentEditor({
   const [view, setView] = useState<"split" | "edit" | "preview">("split");
   const [refining, setRefining] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copiedPlain, setCopiedPlain] = useState(false);
   const [complianceIssues, setComplianceIssues] = useState<ComplianceIssue[]>([]);
   const [complianceLoading, setComplianceLoading] = useState(false);
   const [showCompliance, setShowCompliance] = useState(false);
@@ -330,6 +331,22 @@ ${bodyHTML}
     await navigator.clipboard.writeText(content);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const copyAsPlainText = async () => {
+    const plain = content
+      .replace(/^#{1,6}\s+/gm, "")
+      .replace(/\*\*([^*]+)\*\*/g, "$1")
+      .replace(/\*([^*]+)\*/g, "$1")
+      .replace(/`([^`\n]+)`/g, "$1")
+      .replace(/```[\s\S]*?```/g, "")
+      .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+      .replace(/^\s*[-*+]\s+/gm, "• ")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+    await navigator.clipboard.writeText(plain);
+    setCopiedPlain(true);
+    setTimeout(() => setCopiedPlain(false), 2000);
   };
 
   const exportPDF = () => {
@@ -630,7 +647,7 @@ ${bodyHTML}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border ${
               showInfographic ? "bg-brand-50 text-brand-700 border-brand-200" : "text-ink-2 hover:bg-surface-2 border-surface-3"
             }`}
-            title="Generate a DALL-E infographic from this document"
+            title="Generate a Mermaid visual (mind map, timeline, flowchart, pie chart)"
           >
             <ImageIcon size={13} />
             Infographic
@@ -669,9 +686,19 @@ ${bodyHTML}
               onClick={copyToClipboard}
               className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
                          hover:bg-surface-2 rounded-lg transition-colors"
+              title="Copy as Markdown"
             >
               {copied ? <Check size={13} className="text-accent-green" /> : <Copy size={13} />}
-              {copied ? "Copied" : "Copy"}
+              {copied ? "Copied" : "Copy .md"}
+            </button>
+            <button
+              onClick={copyAsPlainText}
+              className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
+                         hover:bg-surface-2 rounded-lg transition-colors"
+              title="Copy as plain text (no markdown symbols)"
+            >
+              {copiedPlain ? <Check size={13} className="text-accent-green" /> : <Copy size={13} />}
+              {copiedPlain ? "Copied" : "Plain text"}
             </button>
             <button
               onClick={exportMarkdown}
@@ -845,10 +872,11 @@ ${bodyHTML}
         />
       )}
 
-      {/* Infographic Panel */}
+      {/* Visual Generator (Mermaid) Panel */}
       {showInfographic && (
         <InfographicPanel
           content={content}
+          onInsert={(block) => { onChange(content + block); setShowInfographic(false); }}
           onClose={() => setShowInfographic(false)}
         />
       )}

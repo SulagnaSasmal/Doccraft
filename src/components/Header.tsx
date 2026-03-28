@@ -5,11 +5,11 @@ import { FileText, RotateCcw, Users, LogOut, User, Cloud, HelpCircle, Webhook, C
 import type { AppStage } from "@/app/page";
 
 const STAGE_LABELS: Record<AppStage, string> = {
-  upload: "Upload & Configure",
-  analyzing: "Analyzing…",
-  questions: "Review Gaps",
-  generating: "Generating…",
-  editing: "Edit & Export",
+  upload: "Upload",
+  analyzing: "Analyse",
+  questions: "Review",
+  generating: "Generate",
+  editing: "Edit",
 };
 
 const PDF_TOOLS = [
@@ -41,7 +41,7 @@ export default function Header({
   onToggleTheme?: () => void;
   onOpenCommandPalette?: () => void;
 }) {
-  const stages: AppStage[] = ["upload", "questions", "editing"];
+  const stages: AppStage[] = ["upload", "analyzing", "questions", "generating", "editing"];
   const [showTools, setShowTools] = useState(false);
   const toolsRef = useRef<HTMLDivElement>(null);
 
@@ -75,45 +75,38 @@ export default function Header({
         </div>
 
         {/* ── Progress stepper — centred ── */}
-        <div className="hidden md:flex items-center gap-1 mx-auto">
+        <div className="hidden md:flex items-center gap-0.5 mx-auto">
           {stages.map((s, i) => {
-            const current = stages.indexOf(
-              stage === "analyzing" ? "upload" : stage === "generating" ? "questions" : stage
-            );
-            const isDone = i < current;
-            const isCurrent = i === current;
+            const currentIdx = stages.indexOf(stage);
+            const isDone = i < currentIdx;
+            const isCurrent = i === currentIdx;
+            const isActive = stage === "analyzing" || stage === "generating";
             return (
               <div key={s} className="flex items-center">
-                <div className="flex items-center gap-1.5">
+                <div className="flex items-center gap-1">
                   <span
                     className={`w-5 h-5 rounded-full flex items-center justify-center text-[0.6rem] font-bold transition-all duration-300 shrink-0 ${
                       isDone
                         ? "bg-emerald-500 text-white"
                         : isCurrent
-                        ? "bg-blue-600 text-white ring-2 ring-blue-400/30"
+                        ? isActive && (s === "analyzing" || s === "generating")
+                          ? "bg-blue-600 text-white ring-2 ring-blue-400/30 animate-pulse"
+                          : "bg-blue-600 text-white ring-2 ring-blue-400/30"
                         : "bg-slate-800 text-slate-500 border border-slate-700"
                     }`}
                   >
                     {isDone ? <Check size={10} strokeWidth={3} /> : i + 1}
                   </span>
                   <span
-                    className={`text-[0.72rem] font-medium transition-colors whitespace-nowrap ${
-                      isCurrent
-                        ? "text-blue-400"
-                        : isDone
-                        ? "text-emerald-400"
-                        : "text-slate-600"
+                    className={`text-[0.68rem] font-medium transition-colors whitespace-nowrap ${
+                      isCurrent ? "text-blue-400" : isDone ? "text-emerald-400" : "text-slate-600"
                     }`}
                   >
                     {STAGE_LABELS[s]}
                   </span>
                 </div>
                 {i < stages.length - 1 && (
-                  <div
-                    className={`w-6 h-px mx-2 transition-colors ${
-                      isDone ? "bg-emerald-700" : "bg-slate-800"
-                    }`}
-                  />
+                  <div className={`w-4 h-px mx-1.5 transition-colors ${isDone ? "bg-emerald-700" : "bg-slate-800"}`} />
                 )}
               </div>
             );

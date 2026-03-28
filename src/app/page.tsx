@@ -136,6 +136,25 @@ export default function Home() {
     try { localStorage.setItem("doccraft_config", JSON.stringify(config)); } catch {}
   }, [config]);
 
+  // Auto-save generated doc to sessionStorage (survives accidental refresh)
+  useEffect(() => {
+    if (!generatedDoc.trim()) return;
+    try { sessionStorage.setItem("doccraft_draft", generatedDoc); } catch {}
+  }, [generatedDoc]);
+
+  // Restore draft from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const draft = sessionStorage.getItem("doccraft_draft");
+      if (draft?.trim()) {
+        setGeneratedDoc(draft);
+        setBaselineDoc(draft);
+        setStage("editing");
+      }
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   // ── OCR handoff: pre-load text extracted by /ocr page ──────────────────
   useEffect(() => {
     const ocrText = sessionStorage.getItem("doccraft_ocr_text");
@@ -468,6 +487,7 @@ export default function Home() {
     setError("");
     setRecommendation(null);
     setRecDismissed(false);
+    try { sessionStorage.removeItem("doccraft_draft"); } catch {}
   };
 
   const handleRestoreSession = (session: DocSession) => {
@@ -965,9 +985,9 @@ export default function Home() {
                 <div className="flex items-start gap-2 px-2 py-1.5 rounded-lg bg-slate-800/40">
                   <ImageIcon size={11} className="text-violet-400 shrink-0 mt-0.5" />
                   <div>
-                    <p className="text-[0.68rem] font-semibold text-slate-300">AI Infographics</p>
+                    <p className="text-[0.68rem] font-semibold text-slate-300">Visual Generator</p>
                     <p className="text-[0.62rem] text-slate-500 leading-relaxed mt-0.5">
-                      Use the <span className="text-slate-300 font-medium">Infographic</span> button (editor toolbar) to generate DALL-E visuals — flowchart, concept map, timeline, or summary styles.
+                      Use the <span className="text-slate-300 font-medium">Infographic</span> button (editor toolbar) to generate Mermaid visuals — mind map, timeline, flowchart, or pie chart — and insert directly into your doc.
                     </p>
                   </div>
                 </div>
