@@ -508,7 +508,7 @@ export default function Home() {
       <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0 }}>
 
         {/* Left: Utility Toolbox (always visible) */}
-        <div className="w-[272px] shrink-0 flex flex-col overflow-hidden">
+        <div className="w-[248px] shrink-0 flex flex-col overflow-hidden">
           <UtilityToolbox
             uploadedContent={uploadedContent}
             fileNames={fileNames}
@@ -771,7 +771,7 @@ export default function Home() {
 
         {/* Right: Insights panel */}
         <aside
-          className="w-[240px] shrink-0 flex flex-col overflow-hidden border-l border-slate-800/60 glass-panel"
+          className="w-[196px] shrink-0 flex flex-col overflow-hidden border-l border-slate-800/60 glass-panel"
         >
           <div className="px-4 py-3.5 border-b border-slate-800/60">
             <h2 className="text-[0.78rem] font-semibold uppercase tracking-widest text-slate-400">

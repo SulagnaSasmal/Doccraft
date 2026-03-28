@@ -38,7 +38,7 @@ export default function Header({
 
   return (
     <header className="border-b border-surface-3 sticky top-0 z-50 glass">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
+      <div className="w-full px-4 py-3 flex items-center gap-2 min-w-0">
         <div className="flex items-center gap-3">
           <div className="w-9 h-9 bg-brand-700 rounded-lg flex items-center justify-center shadow-sm">
             <FileText size={18} className="text-white" />
@@ -53,8 +53,8 @@ export default function Header({
           </div>
         </div>
 
-        {/* Progress Steps — numbered stepper */}
-        <div className="hidden sm:flex items-center gap-1">
+        {/* Progress Steps — numbered stepper, centred with auto margins */}
+        <div className="hidden md:flex items-center gap-1 mx-auto">
           {stages.map((s, i) => {
             const current = stages.indexOf(
               stage === "analyzing" ? "upload" : stage === "generating" ? "questions" : stage
@@ -63,10 +63,9 @@ export default function Header({
             const isCurrent = i === current;
             return (
               <div key={s} className="flex items-center">
-                <div className="flex items-center gap-2">
-                  {/* Numbered circle or check */}
+                <div className="flex items-center gap-1.5">
                   <span
-                    className={`w-6 h-6 rounded-full flex items-center justify-center text-[0.65rem] font-bold transition-all duration-300 ${
+                    className={`w-5 h-5 rounded-full flex items-center justify-center text-[0.6rem] font-bold transition-all duration-300 shrink-0 ${
                       isDone
                         ? "bg-accent-green text-white"
                         : isCurrent
@@ -74,10 +73,10 @@ export default function Header({
                         : "bg-surface-2 text-ink-4"
                     }`}
                   >
-                    {isDone ? <Check size={12} strokeWidth={3} /> : i + 1}
+                    {isDone ? <Check size={10} strokeWidth={3} /> : i + 1}
                   </span>
                   <span
-                    className={`text-xs font-medium transition-colors ${
+                    className={`text-[0.72rem] font-medium transition-colors whitespace-nowrap ${
                       isCurrent ? "text-brand-700" : isDone ? "text-accent-green" : "text-ink-4"
                     }`}
                   >
@@ -86,7 +85,7 @@ export default function Header({
                 </div>
                 {i < stages.length - 1 && (
                   <div
-                    className={`w-8 h-px mx-2 transition-colors ${
+                    className={`w-6 h-px mx-2 transition-colors ${
                       isDone ? "bg-accent-green" : "bg-surface-3"
                     }`}
                   />
@@ -96,7 +95,7 @@ export default function Header({
           })}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 ml-auto shrink-0">
           {/* CMD+K Command Palette trigger */}
           {onOpenCommandPalette && (
             <button
