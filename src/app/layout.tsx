@@ -10,6 +10,11 @@ export const metadata: Metadata = {
   title: "DocCraft AI — Intelligent Documentation Generator",
   description: "Transform raw content into polished, structured documentation using AI",
   manifest: "/manifest.json",
+  icons: {
+    icon: "/icon.svg",
+    shortcut: "/icon.svg",
+    apple: "/icon.svg",
+  },
 };
 
 export const viewport: Viewport = {

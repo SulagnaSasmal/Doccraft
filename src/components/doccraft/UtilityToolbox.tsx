@@ -136,9 +136,11 @@ export default function UtilityToolbox({
   onDirectLoadMarkdown,
 }: Props) {
   const [isDragging, setIsDragging] = useState(false);
-  const [pasteMode, setPasteMode] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Source tab: "upload" | "paste" | "local"
+  const [sourceTab, setSourceTab] = useState<"upload" | "paste" | "local">("upload");
 
   // Default expanded sections
   const [expanded, setExpanded] = useState<Set<string>>(
@@ -193,8 +195,8 @@ export default function UtilityToolbox({
       setFsLoading(true);
       const nodes = await readDirRecursive(dirHandle, "");
       setFsNodes(nodes);
-      // Auto-expand workspace section when folder is loaded
-      setExpanded((prev) => { const next = new Set(prev); next.add("workspace"); return next; });
+      // Ensure Source Material section is expanded
+      setExpanded((prev) => { const next = new Set(prev); next.add("source"); return next; });
     } catch (e: any) {
       if (e?.name !== "AbortError") console.error("Workspace folder error:", e);
     } finally {
@@ -272,7 +274,7 @@ export default function UtilityToolbox({
     if (!pasteText.trim()) return;
     onContentChange(uploadedContent ? uploadedContent + "\n\n---\n\n" + pasteText : pasteText, [...fileNames, "Pasted content"]);
     setPasteText("");
-    setPasteMode(false);
+    setSourceTab("upload");
   };
 
   const showRecommendation = recommendation && !recDismissed && uploadedContent.length > 0;
@@ -286,7 +288,7 @@ export default function UtilityToolbox({
         </div>
         <div className="min-w-0">
           <h2 className="text-[0.82rem] font-bold text-slate-100 tracking-tight leading-none">
-            Doc Generator
+            Document Generator
           </h2>
           <p className="text-[0.6rem] text-slate-500 tracking-wide uppercase font-medium mt-0.5">
             Configure &amp; Analyze
@@ -313,31 +315,26 @@ export default function UtilityToolbox({
             badge={fileNames.length > 0 ? `${fileNames.length}` : undefined}
           >
             <div className="space-y-2">
-              {/* Upload / Paste tabs */}
-              <div className="flex gap-1 p-0.5 rounded-lg bg-slate-800/60 border border-slate-700/40">
-                <button
-                  type="button"
-                  onClick={() => setPasteMode(false)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[0.68rem] font-medium transition-all ${
-                    !pasteMode ? "bg-slate-700 text-slate-200 shadow-sm" : "text-slate-500 hover:text-slate-300"
-                  }`}
-                >
-                  <Upload size={9} />
-                  Upload
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPasteMode(true)}
-                  className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[0.68rem] font-medium transition-all ${
-                    pasteMode ? "bg-slate-700 text-slate-200 shadow-sm" : "text-slate-500 hover:text-slate-300"
-                  }`}
-                >
-                  <ClipboardPaste size={9} />
-                  Paste
-                </button>
+              {/* Upload / Paste / Local tabs */}
+              <div className="flex gap-0.5 p-0.5 rounded-lg bg-slate-800/60 border border-slate-700/40">
+                {(["upload", "paste", "local"] as const).map((tab) => (
+                  <button
+                    key={tab}
+                    type="button"
+                    onClick={() => setSourceTab(tab)}
+                    className={`flex-1 flex items-center justify-center gap-1 px-1.5 py-1.5 rounded-md text-[0.65rem] font-medium transition-all ${
+                      sourceTab === tab ? "bg-slate-700 text-slate-200 shadow-sm" : "text-slate-500 hover:text-slate-300"
+                    }`}
+                  >
+                    {tab === "upload" && <Upload size={9} />}
+                    {tab === "paste" && <ClipboardPaste size={9} />}
+                    {tab === "local" && <HardDrive size={9} />}
+                    {tab === "upload" ? "Upload" : tab === "paste" ? "Paste" : "Local"}
+                  </button>
+                ))}
               </div>
 
-              {!pasteMode ? (
+              {sourceTab === "upload" ? (
                 <div
                   onDragEnter={(e) => handleDrag(e, true)}
                   onDragLeave={(e) => handleDrag(e, false)}
@@ -373,7 +370,7 @@ export default function UtilityToolbox({
                     <span className="text-[0.58rem] text-emerald-600/80">Local — no upload to servers</span>
                   </div>
                 </div>
-              ) : (
+              ) : sourceTab === "paste" ? (
                 <div className="space-y-2">
                   <textarea
                     value={pasteText}
@@ -392,6 +389,60 @@ export default function UtilityToolbox({
                   >
                     Add Content
                   </button>
+                </div>
+              ) : (
+                /* Local Workspace tab */
+                <div className="space-y-2">
+                  <button
+                    type="button"
+                    onClick={openWorkspaceFolder}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
+                               text-[0.72rem] font-medium text-slate-400 bg-slate-800/60
+                               hover:bg-slate-700/60 hover:text-slate-200 border border-slate-700/40
+                               transition-all"
+                  >
+                    <FolderOpen size={11} />
+                    {fsDirName ? "Change folder" : "Open .md folder"}
+                  </button>
+
+                  {fsLoading && (
+                    <div className="flex items-center gap-2 px-2 py-2 text-[0.72rem] text-slate-500">
+                      <span className="w-3 h-3 border-2 border-slate-500/30 border-t-slate-400 rounded-full animate-spin" />
+                      Scanning…
+                    </div>
+                  )}
+
+                  {fsDirName && !fsLoading && (
+                    <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 overflow-hidden">
+                      <div className="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-slate-700/40
+                                      bg-slate-700/20 text-[0.68rem] text-slate-400 font-medium">
+                        <FolderClosed size={10} className="text-blue-400 shrink-0" />
+                        <span className="truncate">{fsDirName}</span>
+                      </div>
+                      {fsNodes.length === 0 ? (
+                        <p className="text-[0.65rem] text-slate-600 px-3 py-2.5 text-center">
+                          No .md files found
+                        </p>
+                      ) : (
+                        <div className="max-h-[200px] overflow-y-auto">
+                          <WorkspaceFileTree
+                            nodes={fsNodes}
+                            expandedPaths={expandedPaths}
+                            onToggle={toggleExpand}
+                            onFileClick={handleWorkspaceFileClick}
+                            onAddAsSource={handleAddAsSource}
+                            depth={0}
+                          />
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {!fsDirName && !fsLoading && (
+                    <p className="text-[0.62rem] text-slate-600 text-center px-2">
+                      Browse local <span className="text-slate-500">.md</span> files and open them directly in the editor
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -423,73 +474,10 @@ export default function UtilityToolbox({
             </div>
           </Section>
 
-          {/* ── Local Workspace ─────────────────────────────── */}
-          <Section
-            id="workspace"
-            label="Local Workspace"
-            icon={HardDrive}
-            accent="text-slate-500"
-            expanded={expanded.has("workspace")}
-            onToggle={toggleSection}
-          >
-            <div className="space-y-2">
-              <button
-                type="button"
-                onClick={openWorkspaceFolder}
-                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
-                           text-[0.72rem] font-medium text-slate-400 bg-slate-800/60
-                           hover:bg-slate-700/60 hover:text-slate-200 border border-slate-700/40
-                           transition-all"
-              >
-                <FolderOpen size={11} />
-                {fsDirName ? `Change folder` : "Open .md folder"}
-              </button>
-
-              {fsLoading && (
-                <div className="flex items-center gap-2 px-2 py-2 text-[0.72rem] text-slate-500">
-                  <span className="w-3 h-3 border-2 border-slate-500/30 border-t-slate-400 rounded-full animate-spin" />
-                  Scanning…
-                </div>
-              )}
-
-              {fsDirName && !fsLoading && (
-                <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 overflow-hidden">
-                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-slate-700/40
-                                  bg-slate-700/20 text-[0.68rem] text-slate-400 font-medium">
-                    <FolderClosed size={10} className="text-blue-400 shrink-0" />
-                    <span className="truncate">{fsDirName}</span>
-                  </div>
-                  {fsNodes.length === 0 ? (
-                    <p className="text-[0.65rem] text-slate-600 px-3 py-2.5 text-center">
-                      No .md files found
-                    </p>
-                  ) : (
-                    <div className="max-h-[200px] overflow-y-auto">
-                      <WorkspaceFileTree
-                        nodes={fsNodes}
-                        expandedPaths={expandedPaths}
-                        onToggle={toggleExpand}
-                        onFileClick={handleWorkspaceFileClick}
-                        onAddAsSource={handleAddAsSource}
-                        depth={0}
-                      />
-                    </div>
-                  )}
-                </div>
-              )}
-
-              {!fsDirName && !fsLoading && (
-                <p className="text-[0.62rem] text-slate-600 text-center px-2">
-                  Browse local <span className="text-slate-500">.md</span> files and open them directly in the editor
-                </p>
-              )}
-            </div>
-          </Section>
-
-          {/* ── Output Config ────────────────────────────── */}
+          {/* ── Output Configuration ────────────────────────────── */}
           <Section
             id="config"
-            label="Output Config"
+            label="Output Configuration"
             icon={Settings}
             accent="text-slate-500"
             expanded={expanded.has("config")}
@@ -497,7 +485,8 @@ export default function UtilityToolbox({
           >
             <div className="[&_.bg-surface-0]:bg-slate-800/40 [&_.bg-surface-0]:border-slate-700/50
                             [&_.bg-surface-1]:bg-slate-800/30 [&_.text-ink-0]:text-slate-200
-                            [&_.text-ink-2]:text-slate-400 [&_.text-ink-3]:text-slate-500
+                            [&_.text-ink-1]:text-slate-300 [&_.text-ink-2]:text-slate-400
+                            [&_.text-ink-3]:text-slate-500 [&_.text-ink-4]:text-slate-600
                             [&_.border-surface-3]:border-slate-700/50 [&_.rounded-2xl]:rounded-xl">
               <ConfigPanel config={config} onChange={onConfigChange} />
             </div>
@@ -514,7 +503,8 @@ export default function UtilityToolbox({
           >
             <div className="[&_.bg-surface-0]:bg-slate-800/40 [&_.bg-surface-0]:border-slate-700/50
                             [&_.bg-surface-1]:bg-slate-800/30 [&_.text-ink-0]:text-slate-200
-                            [&_.text-ink-2]:text-slate-400 [&_.text-ink-3]:text-slate-500
+                            [&_.text-ink-1]:text-slate-300 [&_.text-ink-2]:text-slate-400
+                            [&_.text-ink-3]:text-slate-500 [&_.text-ink-4]:text-slate-600
                             [&_.border-surface-3]:border-slate-700/50 [&_.rounded-2xl]:rounded-xl">
               <ContextPanel
                 onContextChange={onContextChange}

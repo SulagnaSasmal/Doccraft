@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+  <!-- Background rounded square -->
+  <rect width="32" height="32" rx="7" fill="#1d4ed8"/>
+
+  <!-- Document body -->
+  <rect x="7" y="4" width="13" height="17" rx="2" fill="white"/>
+
+  <!-- Folded corner (dog-ear) -->
+  <path d="M16 4 L20 8 L16 8 Z" fill="#93c5fd"/>
+  <path d="M16 4 L20 4 L20 8 Z" fill="#bfdbfe"/>
+
+  <!-- Document lines -->
+  <rect x="9" y="11" width="7" height="1.5" rx="0.75" fill="#bfdbfe"/>
+  <rect x="9" y="14" width="9" height="1.5" rx="0.75" fill="#bfdbfe"/>
+  <rect x="9" y="17" width="5" height="1.5" rx="0.75" fill="#bfdbfe"/>
+
+  <!-- Sparkle / wand (AI indicator) -->
+  <g transform="translate(18, 18)">
+    <!-- Diagonal pen stroke -->
+    <rect x="0" y="-1" width="8.5" height="2.2" rx="1.1"
+          transform="rotate(-45)" fill="#fbbf24"/>
+    <!-- Tip dot -->
+    <circle cx="-4.5" cy="4.5" r="1.4" fill="#34d399"/>
+    <!-- Sparkle star -->
+    <path d="M9,-3 L9.7,-1.3 L11.5,-1.3 L10.1,-0.2 L10.6,1.5 L9,0.5 L7.4,1.5 L7.9,-0.2 L6.5,-1.3 L8.3,-1.3 Z"
+          fill="white" opacity="0.9"/>
+  </g>
+</svg>

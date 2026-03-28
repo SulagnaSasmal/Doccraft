@@ -78,10 +78,10 @@ export default function Home() {
   const heroFileRef = useRef<HTMLInputElement>(null);
   const [justGenerated, setJustGenerated] = useState(false);
 
-  // Resizable left panel
-  const [leftWidth, setLeftWidth] = useState(288);
+  // Resizable left panel — 320 ensures Configuration labels are fully visible at zoom 100%
+  const [leftWidth, setLeftWidth] = useState(320);
   const dragState = useRef<{ dragging: boolean; startX: number; startW: number }>({
-    dragging: false, startX: 0, startW: 288,
+    dragging: false, startX: 0, startW: 320,
   });
   useEffect(() => {
     const onMove = (e: MouseEvent) => {
@@ -573,21 +573,21 @@ export default function Home() {
           {(stage === "upload" || stage === "analyzing") && (
             !uploadedContent ? (
               /* ── HERO: empty state — upload zone is the centrepiece ── */
-              <div className="flex-1 flex flex-col items-center justify-center px-8 py-10 animate-in-faded overflow-auto">
+              <div className="flex-1 flex flex-col items-center px-8 pt-6 pb-10 animate-in-faded overflow-auto">
+                {/* Compliance badge — pinned near top */}
+                <div className="flex justify-center mb-4 w-full max-w-lg">
+                  <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-600/10 border border-emerald-500/20">
+                    <Shield size={11} className="text-emerald-400" />
+                    <span className="text-[0.68rem] font-medium text-emerald-300 tracking-wide">
+                      Local Browser Processing — No Data Leaves Your Machine
+                    </span>
+                  </div>
+                </div>
+
                 <div className="w-full max-w-lg">
 
-                  {/* Compliance badge */}
-                  <div className="flex justify-center mb-6">
-                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-600/10 border border-emerald-500/20">
-                      <Shield size={11} className="text-emerald-400" />
-                      <span className="text-[0.68rem] font-medium text-emerald-300 tracking-wide">
-                        Local Browser Processing — No Data Leaves Your Machine
-                      </span>
-                    </div>
-                  </div>
-
                   {/* Value proposition */}
-                  <div className="text-center mb-8">
+                  <div className="text-center mb-6">
                     <h1 className="text-2xl font-bold text-slate-100 leading-snug mb-3">
                       Drop your source material.<br />
                       <span className="text-blue-400">DocCraft does the rest.</span>
