@@ -19,7 +19,7 @@ import {
   Sparkles, X, Cloud, Zap, Shield, Clock,
   FileText, Upload, Sun, Moon, RotateCcw,
   Download, Copy, Users, Webhook, Palette,
-  Search, Scissors, Layers, ScanText,
+  Search, Scissors, Layers, ScanText, GitGraph, ImageIcon,
 } from "lucide-react";
 import UtilityToolbox from "@/components/doccraft/UtilityToolbox";
 import DocumentLibrary from "@/components/doccraft/DocumentLibrary";
@@ -77,6 +77,28 @@ export default function Home() {
   const [heroDragging, setHeroDragging] = useState(false);
   const heroFileRef = useRef<HTMLInputElement>(null);
   const [justGenerated, setJustGenerated] = useState(false);
+
+  // Resizable left panel
+  const [leftWidth, setLeftWidth] = useState(288);
+  const dragState = useRef<{ dragging: boolean; startX: number; startW: number }>({
+    dragging: false, startX: 0, startW: 288,
+  });
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragState.current.dragging) return;
+      const delta = e.clientX - dragState.current.startX;
+      setLeftWidth(Math.min(520, Math.max(220, dragState.current.startW + delta)));
+    };
+    const onUp = () => {
+      if (!dragState.current.dragging) return;
+      dragState.current.dragging = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, []);
 
   // History
   const { history, addSession, removeSession, clearAll } = useDocHistory();
@@ -507,8 +529,8 @@ export default function Home() {
       {/* ── Business Hub — three-column layout ──────────────────────── */}
       <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0 }}>
 
-        {/* Left: Utility Toolbox (always visible) */}
-        <div className="w-[288px] shrink-0 flex flex-col overflow-hidden">
+        {/* Left: Utility Toolbox (resizable) */}
+        <div style={{ width: leftWidth }} className="shrink-0 flex flex-col overflow-hidden relative">
           <UtilityToolbox
             uploadedContent={uploadedContent}
             fileNames={fileNames}
@@ -529,6 +551,20 @@ export default function Home() {
             onDismissRecommendation={() => setRecDismissed(true)}
             onDirectLoadMarkdown={handleDirectLoadMarkdown}
           />
+          {/* Drag handle */}
+          <div
+            onMouseDown={(e) => {
+              e.preventDefault();
+              dragState.current = { dragging: true, startX: e.clientX, startW: leftWidth };
+              document.body.style.cursor = "col-resize";
+              document.body.style.userSelect = "none";
+            }}
+            className="absolute right-0 top-0 bottom-0 w-1 cursor-col-resize z-10
+                       hover:bg-blue-500/40 active:bg-blue-500/60 transition-colors group"
+            title="Drag to resize panel"
+          >
+            <div className="absolute inset-y-0 -left-0.5 -right-0.5 group-hover:bg-blue-500/20 transition-colors" />
+          </div>
         </div>
 
         {/* Center: Workspace */}
@@ -853,6 +889,33 @@ export default function Home() {
                   {fileNames.length} source{fileNames.length > 1 ? "s" : ""} loaded
                 </p>
               )}
+            </div>
+
+            {/* Diagrams & Infographics callout */}
+            <div className="px-3 py-2.5 bg-slate-800/30 border border-slate-700/40 rounded-xl">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                Visuals &amp; Diagrams
+              </p>
+              <div className="space-y-1.5">
+                <div className="flex items-start gap-2 px-2 py-1.5 rounded-lg bg-slate-800/40">
+                  <GitGraph size={11} className="text-blue-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[0.68rem] font-semibold text-slate-300">Mermaid Diagrams</p>
+                    <p className="text-[0.62rem] text-slate-500 leading-relaxed mt-0.5">
+                      After generating your doc, use the <span className="text-slate-300 font-medium">Diagram</span> button in the editor toolbar to auto-generate flowcharts, sequence &amp; state diagrams.
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-start gap-2 px-2 py-1.5 rounded-lg bg-slate-800/40">
+                  <ImageIcon size={11} className="text-violet-400 shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-[0.68rem] font-semibold text-slate-300">AI Infographics</p>
+                    <p className="text-[0.62rem] text-slate-500 leading-relaxed mt-0.5">
+                      Use the <span className="text-slate-300 font-medium">Infographic</span> button (editor toolbar) to generate DALL-E visuals — flowchart, concept map, timeline, or summary styles.
+                    </p>
+                  </div>
+                </div>
+              </div>
             </div>
 
             {/* Help Center quick links */}

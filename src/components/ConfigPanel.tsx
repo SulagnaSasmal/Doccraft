@@ -66,22 +66,29 @@ export default function ConfigPanel({
 
         {/* Audience */}
         <div className="bg-surface-1 rounded-xl p-4 border border-surface-2">
-          <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-1 mb-2 uppercase tracking-wider">
             <Users size={13} className="text-brand-500" />
             Audience
           </label>
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="space-y-1.5">
             {AUDIENCES.map((a) => (
               <button
                 key={a.value}
+                type="button"
                 onClick={() => update("audience", a.value)}
-                className={`px-2 py-2 rounded-lg text-xs font-medium text-center transition-all ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
                   config.audience === a.value
                     ? "bg-brand-700 text-white shadow-sm"
                     : "bg-surface-0 text-ink-2 hover:bg-surface-2 border border-surface-3"
                 }`}
               >
-                {a.label}
+                <span className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 transition-colors ${
+                  config.audience === a.value ? "bg-white border-white" : "border-ink-3"
+                }`} />
+                <span className="flex-1">{a.label}</span>
+                <span className={`text-[0.62rem] shrink-0 ${
+                  config.audience === a.value ? "text-white/70" : "text-ink-4"
+                }`}>{a.desc}</span>
               </button>
             ))}
           </div>
@@ -89,22 +96,29 @@ export default function ConfigPanel({
 
         {/* Tone */}
         <div className="bg-surface-1 rounded-xl p-4 border border-surface-2">
-          <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-1 mb-1.5 uppercase tracking-wider">
+          <label className="flex items-center gap-1.5 text-xs font-semibold text-ink-1 mb-2 uppercase tracking-wider">
             <Volume2 size={13} className="text-brand-500" />
             Tone
           </label>
-          <div className="grid grid-cols-3 gap-1.5">
+          <div className="space-y-1.5">
             {TONES.map((t) => (
               <button
                 key={t.value}
+                type="button"
                 onClick={() => update("tone", t.value)}
-                className={`px-2 py-2 rounded-lg text-xs font-medium text-center transition-all ${
+                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
                   config.tone === t.value
                     ? "bg-brand-700 text-white shadow-sm"
                     : "bg-surface-0 text-ink-2 hover:bg-surface-2 border border-surface-3"
                 }`}
               >
-                {t.label}
+                <span className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 transition-colors ${
+                  config.tone === t.value ? "bg-white border-white" : "border-ink-3"
+                }`} />
+                <span className="flex-1">{t.label}</span>
+                <span className={`text-[0.62rem] shrink-0 ${
+                  config.tone === t.value ? "text-white/70" : "text-ink-4"
+                }`}>{t.desc}</span>
               </button>
             ))}
           </div>
