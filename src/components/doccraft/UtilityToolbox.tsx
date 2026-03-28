@@ -198,7 +198,7 @@ export default function UtilityToolbox({
       const nodes = await readDirRecursive(dirHandle, "");
       setFsNodes(nodes);
       // Auto-expand workspace section when folder is loaded
-      setExpanded((prev) => new Set([...prev, "workspace"]));
+      setExpanded((prev) => { const next = new Set(prev); next.add("workspace"); return next; });
     } catch (e: any) {
       if (e?.name !== "AbortError") console.error("Workspace folder error:", e);
     } finally {
