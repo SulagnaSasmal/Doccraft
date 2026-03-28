@@ -394,6 +394,11 @@
   to   { opacity: 1; transform: translateY(0); }
 }
 
+/* Tool page hero background (split / merge / ocr) */
+.bg-tool-hero {
+  background: radial-gradient(ellipse 80% 50% at 50% -10%, rgba(37,99,235,0.10) 0%, transparent 65%), #020817;
+}
+
 /* Subtle dot-grid background — layered under content */
 .bg-grid-slate {
   background-image: radial-gradient(

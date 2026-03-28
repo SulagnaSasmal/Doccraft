@@ -19,7 +19,7 @@ import {
   Sparkles, X, Cloud, Zap, Shield, Clock,
   FileText, Upload, Sun, Moon, RotateCcw,
   Download, Copy, Users, Webhook, Palette,
-  Search,
+  Search, Scissors, Layers, ScanText,
 } from "lucide-react";
 import UtilityToolbox from "@/components/doccraft/UtilityToolbox";
 import DocumentLibrary from "@/components/doccraft/DocumentLibrary";
@@ -74,6 +74,9 @@ export default function Home() {
   const [streamedDoc, setStreamedDoc] = useState("");
   const [error, setError] = useState("");
   const generationAbortRef = useRef<AbortController | null>(null);
+  const [heroDragging, setHeroDragging] = useState(false);
+  const heroFileRef = useRef<HTMLInputElement>(null);
+  const [justGenerated, setJustGenerated] = useState(false);
 
   // History
   const { history, addSession, removeSession, clearAll } = useDocHistory();
@@ -192,6 +195,25 @@ export default function Home() {
     setUploadedContent(content);
     setFileNames(names);
     setError("");
+  };
+
+  const processFilesForHero = async (files: FileList) => {
+    const contents: string[] = [];
+    const names: string[] = [];
+    for (const file of Array.from(files)) {
+      names.push(file.name);
+      if (file.type === "text/plain" || file.name.endsWith(".md") || file.name.endsWith(".csv")) {
+        contents.push(await file.text());
+      } else if (file.type.startsWith("image/")) {
+        contents.push(`[Image: ${file.name}]\n(Image uploaded — will be analyzed by AI vision)`);
+      } else if (file.name.endsWith(".json")) {
+        contents.push(`[JSON File: ${file.name}]\n${await file.text()}`);
+      } else {
+        try { contents.push(await file.text()); }
+        catch { contents.push(`[File: ${file.name}] (Binary — text extraction unavailable in browser)`); }
+      }
+    }
+    handleFilesUploaded(contents.join("\n\n---\n\n"), names);
   };
 
   const handleContextChange = (text: string, glossary: GlossaryData | null) => {
@@ -329,6 +351,8 @@ export default function Home() {
       setBaselineDoc(assembled);
       setStreamedDoc("");
       setStage("editing");
+      setJustGenerated(true);
+      setTimeout(() => setJustGenerated(false), 6000);
 
       addSession({
         config,
@@ -432,6 +456,9 @@ export default function Home() {
     stage === "upload" &&
     uploadedContent.length > 0;
 
+  const wordCount = uploadedContent ? uploadedContent.trim().split(/\s+/).filter(Boolean).length : 0;
+  const estimatedPages = Math.ceil(wordCount / 250) || 0;
+
   return (
     <div
       className="min-h-screen flex flex-col bg-slate-950 bg-grid-slate animate-in-faded"
@@ -488,16 +515,145 @@ export default function Home() {
         </div>
 
         {/* Center: Workspace */}
-        <main className="flex-1 flex flex-col overflow-hidden border-x border-slate-800/60 custom-scrollbar">
+        <main className="flex-1 flex flex-col overflow-hidden border-x border-slate-800 custom-scrollbar">
 
           {(stage === "upload" || stage === "analyzing") && (
-            <DocumentLibrary
-              history={history}
-              onRestore={handleRestoreSession}
-              onRemove={removeSession}
-              onClearAll={clearAll}
-              onNewDoc={handleStartOver}
-            />
+            !uploadedContent ? (
+              /* ── HERO: empty state — upload zone is the centrepiece ── */
+              <div className="flex-1 flex flex-col items-center justify-center px-8 py-10 animate-in-faded overflow-auto">
+                <div className="w-full max-w-lg">
+
+                  {/* Compliance badge */}
+                  <div className="flex justify-center mb-6">
+                    <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-600/10 border border-emerald-500/20">
+                      <Shield size={11} className="text-emerald-400" />
+                      <span className="text-[0.68rem] font-medium text-emerald-300 tracking-wide">
+                        Local Browser Processing — No Data Leaves Your Machine
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Value proposition */}
+                  <div className="text-center mb-8">
+                    <h1 className="text-2xl font-bold text-slate-100 leading-snug mb-3">
+                      Drop your source material.<br />
+                      <span className="text-blue-400">DocCraft does the rest.</span>
+                    </h1>
+                    <p className="text-sm text-slate-400 leading-relaxed">
+                      Specs, notes, API logs, or scanned PDFs — DocCraft identifies gaps, suggests structure, and generates production-ready technical documentation.
+                    </p>
+                  </div>
+
+                  {/* Hero drop zone */}
+                  <div
+                    onDragEnter={(e) => { e.preventDefault(); setHeroDragging(true); }}
+                    onDragLeave={() => setHeroDragging(false)}
+                    onDragOver={(e) => e.preventDefault()}
+                    onDrop={(e) => { e.preventDefault(); setHeroDragging(false); if (e.dataTransfer.files.length) processFilesForHero(e.dataTransfer.files); }}
+                    onClick={() => heroFileRef.current?.click()}
+                    className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all duration-200 ${
+                      heroDragging
+                        ? "border-blue-500 bg-blue-600/10 scale-[1.01]"
+                        : "border-slate-700 hover:border-blue-500/40 hover:bg-slate-800/20"
+                    }`}
+                  >
+                    <input
+                      ref={heroFileRef}
+                      type="file"
+                      multiple
+                      title="Upload source files"
+                      accept=".txt,.md,.csv,.json,.pdf,.docx,.png,.jpg,.jpeg,.gif,.webp"
+                      onChange={(e) => { if (e.target.files) processFilesForHero(e.target.files); }}
+                      className="hidden"
+                    />
+                    <div className={`w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 border transition-all ${heroDragging ? "bg-blue-600/20 border-blue-500/40" : "bg-slate-800 border-slate-700"}`}>
+                      <Upload size={22} className={heroDragging ? "text-blue-400" : "text-slate-500"} />
+                    </div>
+                    <p className="text-[0.95rem] font-semibold text-slate-200 mb-1">Drop files here to begin</p>
+                    <p className="text-sm text-slate-500 mb-5">or click to browse your computer</p>
+                    <div className="flex flex-wrap justify-center gap-2">
+                      {["TXT", "MD", "PDF", "DOCX", "JSON", "Images"].map((fmt) => (
+                        <span key={fmt} className="px-2.5 py-0.5 rounded-md bg-slate-900 border border-slate-800 text-[0.65rem] font-mono text-slate-500">
+                          {fmt}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Quick-access tool shortcuts */}
+                  <p className="text-[0.65rem] font-semibold uppercase tracking-wider text-slate-600 text-center mt-6 mb-3">
+                    Or jump directly to a processing tool
+                  </p>
+                  <div className="grid grid-cols-3 gap-3">
+                    <a href="/split" className="flex flex-col gap-1.5 p-3 rounded-xl border border-slate-800 bg-slate-900/40 hover:border-blue-500/30 hover:bg-blue-600/5 transition-all group">
+                      <Scissors size={15} className="text-blue-400" />
+                      <p className="text-[0.72rem] font-semibold text-slate-300 group-hover:text-slate-100 leading-tight">Content Atomicizer</p>
+                      <p className="text-[0.62rem] text-slate-600 leading-tight">Split PDF into sections</p>
+                    </a>
+                    <a href="/merge" className="flex flex-col gap-1.5 p-3 rounded-xl border border-slate-800 bg-slate-900/40 hover:border-purple-500/30 hover:bg-purple-600/5 transition-all group">
+                      <Layers size={15} className="text-purple-400" />
+                      <p className="text-[0.72rem] font-semibold text-slate-300 group-hover:text-slate-100 leading-tight">Document Assembler</p>
+                      <p className="text-[0.62rem] text-slate-600 leading-tight">Merge multiple PDFs</p>
+                    </a>
+                    <a href="/ocr" className="flex flex-col gap-1.5 p-3 rounded-xl border border-slate-800 bg-slate-900/40 hover:border-emerald-500/30 hover:bg-emerald-600/5 transition-all group">
+                      <ScanText size={15} className="text-emerald-400" />
+                      <p className="text-[0.72rem] font-semibold text-slate-300 group-hover:text-slate-100 leading-tight">OCR Ingestion</p>
+                      <p className="text-[0.62rem] text-slate-600 leading-tight">Extract text from scans</p>
+                    </a>
+                  </div>
+
+                </div>
+              </div>
+            ) : (
+              /* ── SMART SUGGESTIONS: content loaded — show file intel + library ── */
+              <div className="flex-1 overflow-auto">
+                <div className="px-6 pt-6 pb-2">
+                  <div className="rounded-2xl border border-blue-500/20 bg-blue-600/5 p-4 animate-fade-in-up">
+                    <div className="flex items-start gap-3">
+                      <div className="w-8 h-8 rounded-xl bg-blue-600/20 flex items-center justify-center shrink-0">
+                        <Sparkles size={14} className="text-blue-400" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-[0.8rem] font-semibold text-blue-300 mb-1">
+                          DocCraft has read your source material
+                        </p>
+                        <p className="text-[0.72rem] text-slate-400 mb-3">
+                          {fileNames.length} file{fileNames.length > 1 ? "s" : ""} loaded &middot;{" "}
+                          ~{wordCount.toLocaleString()} words &middot;{" "}
+                          ~{estimatedPages} page{estimatedPages !== 1 ? "s" : ""}
+                        </p>
+                        {recommendation && !recDismissed ? (
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[0.72rem] text-slate-300">Suggested output:</span>
+                            <button
+                              type="button"
+                              onClick={() => { setConfig((c) => ({ ...c, docType: recommendation.type })); setRecDismissed(true); }}
+                              className="px-2.5 py-1 rounded-lg bg-blue-600/20 border border-blue-500/30 text-[0.72rem] font-semibold text-blue-300 hover:bg-blue-600/30 transition-colors"
+                            >
+                              {DOC_TYPE_LABELS[recommendation.type] || recommendation.type} →
+                            </button>
+                            <span className="text-[0.65rem] text-slate-600">
+                              {Math.round(recommendation.confidence * 100)}% confidence
+                            </span>
+                          </div>
+                        ) : (
+                          <p className="text-[0.72rem] text-slate-500">
+                            Configure output type in the left panel, then click <span className="text-slate-300 font-medium">Analyze &amp; Identify Gaps</span>.
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <DocumentLibrary
+                  history={history}
+                  onRestore={handleRestoreSession}
+                  onRemove={removeSession}
+                  onClearAll={clearAll}
+                  onNewDoc={handleStartOver}
+                />
+              </div>
+            )
           )}
 
           {stage === "questions" && (
@@ -530,6 +686,7 @@ export default function Home() {
               </div>
               <p className="text-slate-500 text-sm">Streaming tokens live so you can see progress immediately.</p>
               <button
+                type="button"
                 onClick={handleCancelGeneration}
                 className="mt-4 px-4 py-2 rounded-lg border border-slate-700 text-sm font-medium text-slate-400 hover:bg-slate-800 transition-colors"
               >
@@ -548,6 +705,34 @@ export default function Home() {
 
           {stage === "editing" && (
             <div className="flex-1 overflow-auto p-4">
+              {justGenerated && (
+                <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-600/8 p-4 animate-fade-in-up flex items-start gap-3">
+                  <div className="w-8 h-8 rounded-xl bg-emerald-600/20 flex items-center justify-center shrink-0">
+                    <Download size={14} className="text-emerald-400" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-[0.82rem] font-semibold text-emerald-300 mb-0.5">
+                      Documentation generated
+                    </p>
+                    <p className="text-[0.72rem] text-slate-400 leading-relaxed">
+                      Your <span className="text-slate-200 font-medium">{DOC_TYPE_LABELS[config.docType] || config.docType}</span> is ready
+                      {" · "}~{generatedDoc.trim().split(/\s+/).filter(Boolean).length.toLocaleString()} words
+                      {" · "}~{Math.ceil(generatedDoc.trim().split(/\s+/).filter(Boolean).length / 250)} pages estimated
+                    </p>
+                    <div className="flex items-center gap-3 mt-2">
+                      <span className="text-[0.65rem] text-slate-500">Use the toolbar below to refine, export, or save to cloud.</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    title="Dismiss"
+                    onClick={() => setJustGenerated(false)}
+                    className="text-slate-600 hover:text-slate-400 shrink-0 transition-colors"
+                  >
+                    <X size={13} />
+                  </button>
+                </div>
+              )}
               <DocumentEditor
                 content={generatedDoc}
                 onChange={setGeneratedDoc}
@@ -589,6 +774,35 @@ export default function Home() {
                     </button>{" "}
                     to unlock cloud save, teams &amp; GitHub publishing.
                   </p>
+                </div>
+              </div>
+            )}
+
+            {/* Document Properties — shown when source material is loaded */}
+            {fileNames.length > 0 && (
+              <div className="px-3 py-2.5 bg-slate-800/30 border border-slate-700/40 rounded-xl">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                  Document Properties
+                </p>
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[0.65rem] text-slate-500">Sources</span>
+                    <span className="text-[0.65rem] text-slate-300 font-medium">{fileNames.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[0.65rem] text-slate-500">Words</span>
+                    <span className="text-[0.65rem] text-slate-300 font-medium">~{wordCount.toLocaleString()}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[0.65rem] text-slate-500">Est. Pages</span>
+                    <span className="text-[0.65rem] text-slate-300 font-medium">~{estimatedPages}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-[0.65rem] text-slate-500">Output Type</span>
+                    <span className="text-[0.65rem] text-blue-400 font-medium truncate max-w-[90px] text-right">
+                      {DOC_TYPE_LABELS[config.docType] || config.docType}
+                    </span>
+                  </div>
                 </div>
               </div>
             )}

@@ -3,7 +3,7 @@
 import {
   Scissors, Merge, FileOutput, Upload, ClipboardPaste, X, FileText, Image,
   Table, FileJson, FileImage, FolderOpen, FolderClosed, ChevronRight,
-  ChevronDown, FileCode2,
+  ChevronDown, FileCode2, Shield, Wrench, Settings, BookOpen, HardDrive,
 } from "lucide-react";
 import type { DocConfig } from "@/app/page";
 import type { GlossaryData } from "@/lib/validateTerminology";
@@ -11,7 +11,6 @@ import ConfigPanel from "@/components/ConfigPanel";
 import ContextPanel from "@/components/ContextPanel";
 import { useRef, useState, DragEvent, MouseEvent } from "react";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Separator } from "@/components/ui/separator";
 
 interface Recommendation {
   type: string;
@@ -40,9 +39,9 @@ const FILE_TYPE_HINTS: Record<string, { label: string; Icon: typeof FileText }> 
 };
 
 const PDF_TOOLS = [
-  { id: "split", label: "Split PDF", icon: Scissors, desc: "Divide into pages or ranges" },
-  { id: "merge", label: "Merge PDFs", icon: Merge, desc: "Combine multiple files" },
-  { id: "extract", label: "Extract Pages", icon: FileOutput, desc: "Pull specific pages out" },
+  { id: "split", label: "Content Atomicizer", icon: Scissors, desc: "Divide into sections or page ranges", href: "/split", accent: "text-blue-400", hoverBg: "hover:bg-blue-600/15 hover:border-blue-500/40" },
+  { id: "merge", label: "Document Assembler", icon: Merge, desc: "Combine multiple files into one", href: "/merge", accent: "text-purple-400", hoverBg: "hover:bg-purple-600/15 hover:border-purple-500/40" },
+  { id: "extract", label: "Precision Extractor", icon: FileOutput, desc: "Pull specific pages out", href: "/ocr", accent: "text-emerald-400", hoverBg: "hover:bg-emerald-600/15 hover:border-emerald-500/40" },
 ];
 
 // ── File System Access API types ─────────────────────────────────────────────
@@ -73,6 +72,56 @@ interface Props {
   onDirectLoadMarkdown: (content: string, fileName: string) => void;
 }
 
+// ── Collapsible section wrapper ───────────────────────────────────────────────
+function Section({
+  id,
+  label,
+  icon: Icon,
+  accent = "text-slate-400",
+  expanded,
+  onToggle,
+  children,
+  badge,
+}: {
+  id: string;
+  label: string;
+  icon: typeof FileText;
+  accent?: string;
+  expanded: boolean;
+  onToggle: (id: string) => void;
+  children: React.ReactNode;
+  badge?: string;
+}) {
+  return (
+    <div className="border border-slate-800/60 rounded-xl overflow-hidden">
+      <button
+        type="button"
+        onClick={() => onToggle(id)}
+        className="w-full flex items-center gap-2.5 px-3 py-2.5 bg-slate-900/60 hover:bg-slate-800/60 transition-colors text-left"
+      >
+        <Icon size={13} className={`${accent} shrink-0`} />
+        <span className="flex-1 text-[0.72rem] font-semibold uppercase tracking-wider text-slate-400">
+          {label}
+        </span>
+        {badge && (
+          <span className="px-1.5 py-0.5 rounded-md bg-blue-600/20 text-blue-400 text-[0.6rem] font-bold">
+            {badge}
+          </span>
+        )}
+        <ChevronDown
+          size={12}
+          className={`text-slate-600 transition-transform duration-200 shrink-0 ${expanded ? "" : "-rotate-90"}`}
+        />
+      </button>
+      {expanded && (
+        <div className="px-3 py-3 bg-slate-950/40">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function UtilityToolbox({
   uploadedContent,
   fileNames,
@@ -94,6 +143,20 @@ export default function UtilityToolbox({
   const [pasteMode, setPasteMode] = useState(false);
   const [pasteText, setPasteText] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Default expanded sections
+  const [expanded, setExpanded] = useState<Set<string>>(
+    new Set(["source", "tools"])
+  );
+
+  const toggleSection = (id: string) => {
+    setExpanded((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   // ── Local Workspace state ───────────────────────────────────
   const [fsNodes, setFsNodes] = useState<FsNode[]>([]);
@@ -134,6 +197,8 @@ export default function UtilityToolbox({
       setFsLoading(true);
       const nodes = await readDirRecursive(dirHandle, "");
       setFsNodes(nodes);
+      // Auto-expand workspace section when folder is loaded
+      setExpanded((prev) => new Set([...prev, "workspace"]));
     } catch (e: any) {
       if (e?.name !== "AbortError") console.error("Workspace folder error:", e);
     } finally {
@@ -225,241 +290,268 @@ export default function UtilityToolbox({
         WebkitBackdropFilter: "blur(16px)",
       }}
     >
-      {/* Header */}
-      <div className="px-4 py-3.5 border-b border-slate-800/60">
+      {/* ── Header ── */}
+      <div className="px-4 py-3.5 border-b border-slate-800/60 flex items-center gap-2.5">
+        <div className="w-5 h-5 rounded-md bg-blue-600/20 flex items-center justify-center">
+          <Wrench size={10} className="text-blue-400" />
+        </div>
         <h2 className="text-[0.78rem] font-semibold uppercase tracking-widest text-slate-400">
           Utility Toolbox
         </h2>
+        {fileNames.length > 0 && (
+          <span className="ml-auto px-1.5 py-0.5 rounded-md bg-emerald-600/20 text-emerald-400 text-[0.6rem] font-bold">
+            {fileNames.length} src
+          </span>
+        )}
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="px-3 py-3 space-y-4">
+        <div className="px-3 py-3 space-y-2">
 
-          {/* ── Local Workspace ─────────────────────────── */}
-          <section>
-            <div className="flex items-center justify-between mb-2 px-1">
-              <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500">
-                Local Workspace
-              </p>
-              <button
-                onClick={openWorkspaceFolder}
-                className="flex items-center gap-1 px-2 py-1 rounded-md text-[0.65rem] font-medium
-                           text-slate-400 hover:bg-slate-800 hover:text-slate-200 transition-colors"
-              >
-                <FolderOpen size={10} />
-                {fsDirName ? "Change" : "Open Folder"}
-              </button>
-            </div>
-
-            {!fsDirName && !fsLoading && (
-              <div
-                onClick={openWorkspaceFolder}
-                className="border border-dashed border-slate-700/50 rounded-xl p-3 text-center
-                           cursor-pointer hover:border-blue-500/40 hover:bg-slate-800/20 transition-colors"
-              >
-                <FolderOpen size={18} className="text-slate-600 mx-auto mb-1.5" />
-                <p className="text-[0.68rem] text-slate-500">
-                  Browse local <span className="text-slate-400 font-medium">.md</span> files
-                  &amp; convert to PDF
-                </p>
-              </div>
-            )}
-
-            {fsLoading && (
-              <div className="flex items-center gap-2 px-2 py-2 text-[0.72rem] text-slate-500">
-                <span className="w-3 h-3 border-2 border-slate-500/30 border-t-slate-400 rounded-full animate-spin" />
-                Scanning folder…
-              </div>
-            )}
-
-            {fsDirName && !fsLoading && (
-              <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 overflow-hidden">
-                <div className="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-slate-700/40
-                                bg-slate-700/20 text-[0.68rem] text-slate-400 font-medium">
-                  <FolderClosed size={11} className="text-blue-400 shrink-0" />
-                  <span className="truncate">{fsDirName}</span>
-                </div>
-                {fsNodes.length === 0 ? (
-                  <p className="text-[0.65rem] text-slate-600 px-3 py-2.5 text-center">
-                    No .md files found
-                  </p>
-                ) : (
-                  <div className="max-h-[220px] overflow-y-auto">
-                    <WorkspaceFileTree
-                      nodes={fsNodes}
-                      expandedPaths={expandedPaths}
-                      onToggle={toggleExpand}
-                      onFileClick={handleWorkspaceFileClick}
-                      onAddAsSource={handleAddAsSource}
-                      depth={0}
-                    />
-                  </div>
-                )}
-              </div>
-            )}
-          </section>
-
-          <Separator className="bg-slate-800/60" />
-
-          {/* ── PDF Tools ───────────────────────────────── */}
-          <section>
-            <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500 mb-2 px-1">
-              PDF Tools
-            </p>
-            <div className="space-y-1">
-              {PDF_TOOLS.map(({ id, label, icon: Icon, desc }) => (
+          {/* ── Source Material ─────────────────────────────── */}
+          <Section
+            id="source"
+            label="Source Material"
+            icon={Upload}
+            accent="text-blue-400"
+            expanded={expanded.has("source")}
+            onToggle={toggleSection}
+            badge={fileNames.length > 0 ? `${fileNames.length}` : undefined}
+          >
+            <div className="space-y-2">
+              {/* Upload / Paste tabs */}
+              <div className="flex gap-1 p-0.5 rounded-lg bg-slate-800/60 border border-slate-700/40">
                 <button
-                  key={id}
-                  className="w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl
-                             text-left transition-all duration-150
-                             bg-slate-800/40 hover:bg-blue-600/20 hover:border-blue-500/40
-                             border border-slate-700/40 group"
-                >
-                  <span className="w-7 h-7 rounded-lg bg-slate-700/60 group-hover:bg-blue-600/30
-                                   flex items-center justify-center shrink-0 transition-colors">
-                    <Icon size={13} className="text-slate-300 group-hover:text-blue-400" />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[0.78rem] font-medium text-slate-200 group-hover:text-white">
-                      {label}
-                    </span>
-                    <span className="block text-[0.65rem] text-slate-500 truncate">{desc}</span>
-                  </span>
-                </button>
-              ))}
-            </div>
-          </section>
-
-          <Separator className="bg-slate-800/60" />
-
-          {/* ── Source Material ─────────────────────────── */}
-          <section>
-            <div className="flex items-center justify-between mb-2 px-1">
-              <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500">
-                Source Material
-              </p>
-              <div className="flex gap-1">
-                <button
+                  type="button"
                   onClick={() => setPasteMode(false)}
-                  className={`px-2 py-1 rounded-md text-[0.65rem] font-medium transition-colors ${
-                    !pasteMode ? "bg-blue-600/30 text-blue-300" : "text-slate-500 hover:bg-slate-800"
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[0.68rem] font-medium transition-all ${
+                    !pasteMode ? "bg-slate-700 text-slate-200 shadow-sm" : "text-slate-500 hover:text-slate-300"
                   }`}
                 >
-                  <Upload size={10} className="inline mr-1 -mt-0.5" />
+                  <Upload size={9} />
                   Upload
                 </button>
                 <button
+                  type="button"
                   onClick={() => setPasteMode(true)}
-                  className={`px-2 py-1 rounded-md text-[0.65rem] font-medium transition-colors ${
-                    pasteMode ? "bg-blue-600/30 text-blue-300" : "text-slate-500 hover:bg-slate-800"
+                  className={`flex-1 flex items-center justify-center gap-1.5 px-2 py-1.5 rounded-md text-[0.68rem] font-medium transition-all ${
+                    pasteMode ? "bg-slate-700 text-slate-200 shadow-sm" : "text-slate-500 hover:text-slate-300"
                   }`}
                 >
-                  <ClipboardPaste size={10} className="inline mr-1 -mt-0.5" />
+                  <ClipboardPaste size={9} />
                   Paste
                 </button>
               </div>
-            </div>
 
-            {!pasteMode ? (
-              <div
-                onDragEnter={(e) => handleDrag(e, true)}
-                onDragLeave={(e) => handleDrag(e, false)}
-                onDragOver={(e) => e.preventDefault()}
-                onDrop={handleDrop}
-                onClick={() => fileInputRef.current?.click()}
-                className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all duration-200 ${
-                  isDragging
-                    ? "border-blue-500 bg-blue-900/20"
-                    : "border-slate-700/60 hover:border-blue-500/50 hover:bg-slate-800/40"
-                }`}
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  multiple
-                  accept=".txt,.md,.csv,.json,.pdf,.docx,.png,.jpg,.jpeg,.gif,.webp"
-                  onChange={(e) => e.target.files && processFiles(e.target.files)}
-                  className="hidden"
-                />
-                <div className="w-8 h-8 bg-slate-700/60 rounded-lg flex items-center justify-center mx-auto mb-2">
-                  <Upload size={16} className="text-slate-400" />
-                </div>
-                <p className="text-[0.72rem] font-medium text-slate-300">
-                  Drop files or <span className="text-blue-400">browse</span>
-                </p>
-                <p className="text-[0.62rem] text-slate-500 mt-1">
-                  TXT · MD · PDF · DOCX · JSON · Images
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-2">
-                <textarea
-                  value={pasteText}
-                  onChange={(e) => setPasteText(e.target.value)}
-                  placeholder="Paste raw content — notes, specs, API details…"
-                  className="w-full h-32 px-3 py-2 rounded-xl border border-slate-700/60 bg-slate-800/60
-                             text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none
-                             focus:ring-1 focus:ring-blue-500/50 resize-none font-mono"
-                />
-                <button
-                  onClick={handlePasteSubmit}
-                  disabled={!pasteText.trim()}
-                  className="w-full px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg
-                             hover:bg-blue-700 disabled:opacity-40 transition-colors"
+              {!pasteMode ? (
+                <div
+                  onDragEnter={(e) => handleDrag(e, true)}
+                  onDragLeave={(e) => handleDrag(e, false)}
+                  onDragOver={(e) => e.preventDefault()}
+                  onDrop={handleDrop}
+                  onClick={() => fileInputRef.current?.click()}
+                  className={`border-2 border-dashed rounded-xl p-4 text-center cursor-pointer transition-all duration-200 ${
+                    isDragging
+                      ? "border-blue-500 bg-blue-900/20"
+                      : "border-slate-700/60 hover:border-blue-500/50 hover:bg-slate-800/40"
+                  }`}
                 >
-                  Add Content
-                </button>
-              </div>
-            )}
-
-            {/* Loaded files */}
-            {fileNames.length > 0 && (
-              <div className="mt-2 space-y-1">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-[0.65rem] text-slate-500">
-                    {fileNames.length} source{fileNames.length > 1 ? "s" : ""} loaded
-                  </span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    multiple
+                    accept=".txt,.md,.csv,.json,.pdf,.docx,.png,.jpg,.jpeg,.gif,.webp"
+                    onChange={(e) => e.target.files && processFiles(e.target.files)}
+                    className="hidden"
+                  />
+                  <div className="w-8 h-8 bg-slate-700/60 rounded-lg flex items-center justify-center mx-auto mb-2">
+                    <Upload size={14} className="text-slate-400" />
+                  </div>
+                  <p className="text-[0.72rem] font-medium text-slate-300">
+                    Drop or <span className="text-blue-400">browse</span>
+                  </p>
+                  <p className="text-[0.62rem] text-slate-500 mt-0.5">
+                    TXT · MD · PDF · DOCX · JSON · Images
+                  </p>
+                  <div className="flex items-center justify-center gap-1.5 mt-2">
+                    <Shield size={8} className="text-emerald-500/70" />
+                    <span className="text-[0.58rem] text-emerald-600/80">Local — no upload to servers</span>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  <textarea
+                    value={pasteText}
+                    onChange={(e) => setPasteText(e.target.value)}
+                    placeholder="Paste raw content — notes, specs, API details…"
+                    className="w-full h-28 px-3 py-2 rounded-xl border border-slate-700/60 bg-slate-800/60
+                               text-xs text-slate-200 placeholder:text-slate-600 focus:outline-none
+                               focus:ring-1 focus:ring-blue-500/50 resize-none font-mono"
+                  />
                   <button
-                    onClick={() => onContentChange("", [])}
-                    className="text-[0.65rem] text-red-400 hover:underline flex items-center gap-1"
+                    type="button"
+                    onClick={handlePasteSubmit}
+                    disabled={!pasteText.trim()}
+                    className="w-full px-3 py-1.5 bg-blue-600 text-white text-xs font-medium rounded-lg
+                               hover:bg-blue-700 disabled:opacity-40 transition-colors"
                   >
-                    <X size={10} /> Clear
+                    Add Content
                   </button>
                 </div>
-                {fileNames.map((name, i) => (
-                  <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-slate-800/40 rounded-lg border border-slate-700/40">
-                    {name.match(/\.(png|jpg|jpeg|gif|webp)$/i)
-                      ? <Image size={11} className="text-blue-400 shrink-0" />
-                      : <FileText size={11} className="text-blue-400 shrink-0" />}
-                    <span className="text-[0.65rem] text-slate-300 truncate">{name}</span>
+              )}
+
+              {/* Loaded files */}
+              {fileNames.length > 0 && (
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[0.65rem] text-slate-500">
+                      {fileNames.length} source{fileNames.length > 1 ? "s" : ""} loaded
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onContentChange("", [])}
+                      className="text-[0.65rem] text-red-400/70 hover:text-red-400 flex items-center gap-1 transition-colors"
+                    >
+                      <X size={9} /> Clear all
+                    </button>
                   </div>
-                ))}
-              </div>
-            )}
-          </section>
+                  {fileNames.map((name, i) => (
+                    <div key={i} className="flex items-center gap-2 px-2.5 py-1.5 bg-slate-800/40 rounded-lg border border-slate-700/40">
+                      {name.match(/\.(png|jpg|jpeg|gif|webp)$/i)
+                        ? <Image size={10} className="text-blue-400 shrink-0" />
+                        : <FileText size={10} className="text-blue-400 shrink-0" />}
+                      <span className="text-[0.65rem] text-slate-300 truncate">{name}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </Section>
 
-          <Separator className="bg-slate-800/60" />
+          {/* ── Processing Engine ─────────────────────────── */}
+          <Section
+            id="tools"
+            label="Processing Engine"
+            icon={Wrench}
+            accent="text-slate-400"
+            expanded={expanded.has("tools")}
+            onToggle={toggleSection}
+          >
+            <div className="space-y-1.5">
+              {PDF_TOOLS.map(({ id, label, icon: Icon, desc, href, accent, hoverBg }) => (
+                <a
+                  key={id}
+                  href={href}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl
+                             text-left transition-all duration-150
+                             bg-slate-800/40 ${hoverBg}
+                             border border-slate-700/40 group`}
+                >
+                  <span className={`w-7 h-7 rounded-lg bg-slate-700/60 group-hover:bg-slate-700/80
+                                   flex items-center justify-center shrink-0 transition-colors`}>
+                    <Icon size={13} className={accent} />
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block text-[0.75rem] font-medium text-slate-200 group-hover:text-white">
+                      {label}
+                    </span>
+                    <span className="block text-[0.62rem] text-slate-500 truncate">{desc}</span>
+                  </span>
+                  <ChevronRight size={11} className="text-slate-700 group-hover:text-slate-400 ml-auto shrink-0 transition-colors" />
+                </a>
+              ))}
+            </div>
+          </Section>
 
-          {/* ── Config ──────────────────────────────────── */}
-          <section>
-            <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500 mb-2 px-1">
-              Output Config
-            </p>
+          {/* ── Local Workspace ─────────────────────────────── */}
+          <Section
+            id="workspace"
+            label="Local Workspace"
+            icon={HardDrive}
+            accent="text-slate-500"
+            expanded={expanded.has("workspace")}
+            onToggle={toggleSection}
+          >
+            <div className="space-y-2">
+              <button
+                type="button"
+                onClick={openWorkspaceFolder}
+                className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-xl
+                           text-[0.72rem] font-medium text-slate-400 bg-slate-800/60
+                           hover:bg-slate-700/60 hover:text-slate-200 border border-slate-700/40
+                           transition-all"
+              >
+                <FolderOpen size={11} />
+                {fsDirName ? `Change folder` : "Open .md folder"}
+              </button>
+
+              {fsLoading && (
+                <div className="flex items-center gap-2 px-2 py-2 text-[0.72rem] text-slate-500">
+                  <span className="w-3 h-3 border-2 border-slate-500/30 border-t-slate-400 rounded-full animate-spin" />
+                  Scanning…
+                </div>
+              )}
+
+              {fsDirName && !fsLoading && (
+                <div className="rounded-xl border border-slate-700/40 bg-slate-800/20 overflow-hidden">
+                  <div className="flex items-center gap-1.5 px-2.5 py-1.5 border-b border-slate-700/40
+                                  bg-slate-700/20 text-[0.68rem] text-slate-400 font-medium">
+                    <FolderClosed size={10} className="text-blue-400 shrink-0" />
+                    <span className="truncate">{fsDirName}</span>
+                  </div>
+                  {fsNodes.length === 0 ? (
+                    <p className="text-[0.65rem] text-slate-600 px-3 py-2.5 text-center">
+                      No .md files found
+                    </p>
+                  ) : (
+                    <div className="max-h-[200px] overflow-y-auto">
+                      <WorkspaceFileTree
+                        nodes={fsNodes}
+                        expandedPaths={expandedPaths}
+                        onToggle={toggleExpand}
+                        onFileClick={handleWorkspaceFileClick}
+                        onAddAsSource={handleAddAsSource}
+                        depth={0}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {!fsDirName && !fsLoading && (
+                <p className="text-[0.62rem] text-slate-600 text-center px-2">
+                  Browse local <span className="text-slate-500">.md</span> files and open them directly in the editor
+                </p>
+              )}
+            </div>
+          </Section>
+
+          {/* ── Output Config ────────────────────────────── */}
+          <Section
+            id="config"
+            label="Output Config"
+            icon={Settings}
+            accent="text-slate-500"
+            expanded={expanded.has("config")}
+            onToggle={toggleSection}
+          >
             <div className="[&_.bg-surface-0]:bg-slate-800/40 [&_.bg-surface-0]:border-slate-700/50
                             [&_.bg-surface-1]:bg-slate-800/30 [&_.text-ink-0]:text-slate-200
                             [&_.text-ink-2]:text-slate-400 [&_.text-ink-3]:text-slate-500
                             [&_.border-surface-3]:border-slate-700/50 [&_.rounded-2xl]:rounded-xl">
               <ConfigPanel config={config} onChange={onConfigChange} />
             </div>
-          </section>
+          </Section>
 
-          <Separator className="bg-slate-800/60" />
-
-          {/* ── Context ─────────────────────────────────── */}
-          <section>
-            <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500 mb-2 px-1">
-              Context & Glossary
-            </p>
+          {/* ── Context & Glossary ───────────────────────── */}
+          <Section
+            id="context"
+            label="Context & Glossary"
+            icon={BookOpen}
+            accent="text-slate-500"
+            expanded={expanded.has("context")}
+            onToggle={toggleSection}
+          >
             <div className="[&_.bg-surface-0]:bg-slate-800/40 [&_.bg-surface-0]:border-slate-700/50
                             [&_.bg-surface-1]:bg-slate-800/30 [&_.text-ink-0]:text-slate-200
                             [&_.text-ink-2]:text-slate-400 [&_.text-ink-3]:text-slate-500
@@ -470,7 +562,7 @@ export default function UtilityToolbox({
                 glossaryData={glossaryData}
               />
             </div>
-          </section>
+          </Section>
 
           {/* ── Recommendation callout ───────────────────── */}
           {showRecommendation && (
@@ -483,20 +575,22 @@ export default function UtilityToolbox({
                   {recommendation!.reason}
                 </p>
                 <button
+                  type="button"
                   onClick={() => onApplyRecommendation(recommendation!.type)}
                   className="mt-1 text-[0.65rem] font-semibold text-blue-400 hover:underline"
                 >
                   Use this →
                 </button>
               </div>
-              <button onClick={onDismissRecommendation} className="text-slate-600 hover:text-slate-400">
+              <button type="button" onClick={onDismissRecommendation} className="text-slate-600 hover:text-slate-400">
                 <X size={12} />
               </button>
             </div>
           )}
 
-          {/* ── Analyze button ───────────────────────────── */}
+          {/* ── Analyze CTA ──────────────────────────────── */}
           <button
+            type="button"
             onClick={onAnalyze}
             disabled={!uploadedContent.trim() || isAnalyzing}
             className="w-full py-2.5 px-4 bg-blue-600 text-white font-semibold rounded-xl
@@ -543,6 +637,7 @@ function WorkspaceFileTree({
         node.kind === "directory" ? (
           <div key={node.path}>
             <button
+              type="button"
               onClick={() => onToggle(node.path)}
               className="w-full flex items-center gap-1.5 py-1 hover:bg-slate-700/30 transition-colors"
               style={{ paddingLeft: `${10 + depth * 12}px` }}
@@ -580,6 +675,7 @@ function WorkspaceFileTree({
               {node.name}
             </span>
             <button
+              type="button"
               onClick={(e) => onAddAsSource(node, e)}
               className="opacity-0 group-hover:opacity-100 text-[0.58rem] font-semibold shrink-0
                          px-1.5 py-0.5 rounded bg-slate-700/60 text-slate-400

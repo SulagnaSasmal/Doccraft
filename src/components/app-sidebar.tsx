@@ -95,7 +95,7 @@ const toolkit = [
 
 export function AppSidebar() {
   return (
-    <Sidebar className="border-r border-slate-800 bg-slate-950/80 backdrop-blur-xl">
+    <Sidebar className="border-r border-slate-800 bg-transparent">
       {/* ── Brand header ── */}
       <SidebarHeader className="p-6">
         <div className="flex items-center gap-3">

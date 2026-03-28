@@ -41,7 +41,7 @@ export default function RootLayout({
 
               <main className="flex-1 flex flex-col overflow-hidden">
                 {/* Top Command Bar */}
-                <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 bg-slate-900/50 backdrop-blur-md shrink-0">
+                <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 shrink-0">
                   <div className="flex items-center gap-4">
                     <SidebarTrigger className="text-slate-400 hover:text-slate-100" />
                     <div className="h-6 w-px bg-slate-800 mx-1" />
@@ -71,20 +71,19 @@ export default function RootLayout({
               </main>
 
               {/* Right-side Active Intelligence Panel */}
-              <aside className="w-80 border-l border-slate-800 bg-slate-900/30 p-4 hidden xl:flex xl:flex-col shrink-0">
-                <h3 className="text-xs font-semibold uppercase tracking-wider text-slate-500 mb-4">
+              <aside className="w-72 border-l border-slate-800 p-6 hidden xl:flex xl:flex-col shrink-0">
+                <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-6">
                   Document Insights
                 </h3>
-                <div className="space-y-4">
-                  <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
-                    <p className="text-xs text-slate-400">Compliance Status</p>
-                    <p className="text-sm font-medium mt-1 text-yellow-500 italic">
-                      ● Needs Verification (FEMA)
-                    </p>
+                <div className="space-y-5">
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Compliance Status</p>
+                    <p className="text-sm font-medium text-yellow-500">● Needs Verification (FEMA)</p>
                   </div>
-                  <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/50">
-                    <p className="text-xs text-slate-400">Active Documents</p>
-                    <p className="text-sm font-medium mt-1 text-slate-200">—</p>
+                  <div className="h-px bg-slate-800" />
+                  <div>
+                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Active Documents</p>
+                    <p className="text-sm text-slate-500">—</p>
                   </div>
                 </div>
               </aside>

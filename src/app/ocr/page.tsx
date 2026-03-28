@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { ScanText, Upload, ImageIcon, X, FileText, ChevronRight } from "lucide-react";
+import { ScanText, Upload, ImageIcon, X, FileText, ChevronRight, ArrowLeft, Shield, Zap } from "lucide-react";
 
 interface ImageFile {
   id: string;
@@ -44,108 +44,179 @@ export default function OcrPage() {
     b > 1_000_000 ? `${(b / 1_000_000).toFixed(1)} MB` : `${Math.round(b / 1000)} KB`;
 
   return (
-    <div className="max-w-2xl mx-auto px-6 py-10 space-y-8">
-      {/* Header */}
-      <div className="flex items-center gap-4">
-        <div className="w-10 h-10 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center">
-          <ScanText className="w-5 h-5 text-emerald-400" />
+    <div className="min-h-screen flex flex-col bg-tool-hero">
+      {/* ── Top bar ── */}
+      <div className="flex items-center gap-3 px-6 py-4 border-b border-slate-800/60">
+        <a href="/" className="flex items-center gap-1.5 text-slate-500 hover:text-slate-300 transition-colors text-sm">
+          <ArrowLeft size={14} />
+          DocCraft
+        </a>
+        <span className="text-slate-700">/</span>
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center">
+            <ScanText size={11} className="text-emerald-400" />
+          </div>
+          <span className="text-sm font-semibold text-slate-300">OCR Ingestion</span>
         </div>
-        <div>
-          <h1 className="text-xl font-bold text-slate-100">OCR Ingestion</h1>
-          <p className="text-sm text-slate-500">Extract text from images and scanned PDFs</p>
+        <div className="ml-auto inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-600/10 border border-emerald-500/20">
+          <Shield size={10} className="text-emerald-400" />
+          <span className="text-[0.65rem] font-medium text-emerald-300">Local Processing — No Upload to Servers</span>
         </div>
       </div>
 
-      {/* Supported formats */}
-      <div className="flex flex-wrap gap-2">
-        {["PNG", "JPG", "WEBP", "TIFF", "Scanned PDF"].map((fmt) => (
-          <span
-            key={fmt}
-            className="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-[11px] text-slate-400 font-mono"
-          >
-            {fmt}
-          </span>
-        ))}
-      </div>
+      <div className="flex-1 flex flex-col items-center justify-center px-6 py-10">
+        <div className="w-full max-w-xl">
 
-      {/* Drop zone */}
-      <div
-        onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
-        onDragLeave={() => setDragging(false)}
-        onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
-        onClick={() => inputRef.current?.click()}
-        className={`border-2 border-dashed rounded-2xl p-10 text-center cursor-pointer transition-all ${
-          dragging
-            ? "border-emerald-500 bg-emerald-500/10"
-            : "border-slate-700 hover:border-slate-600 hover:bg-slate-800/30"
-        }`}
-      >
-        <Upload className="w-7 h-7 text-slate-500 mx-auto mb-2" />
-        <p className="text-slate-300 font-medium text-sm">Drop images or scanned PDFs</p>
-        <p className="text-slate-600 text-xs mt-1">Extracted text loads into the Doc Generator</p>
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*,.pdf"
-          multiple
-          className="hidden"
-          onChange={(e) => { if (e.target.files) addFiles(e.target.files); }}
-        />
-      </div>
+          {files.length === 0 ? (
+            <>
+              {/* Hero empty state */}
+              <div className="text-center mb-8">
+                <div className="w-14 h-14 rounded-2xl bg-emerald-600/15 border border-emerald-500/25 flex items-center justify-center mx-auto mb-5">
+                  <ScanText size={22} className="text-emerald-400" />
+                </div>
+                <h1 className="text-2xl font-bold text-slate-100 mb-2">OCR Ingestion</h1>
+                <p className="text-sm text-slate-400 leading-relaxed max-w-sm mx-auto">
+                  Extract clean, structured text from scanned documents, images, and image-based PDFs. Extracted text flows directly into the Doc Generator as source material.
+                </p>
+              </div>
 
-      {/* Preview grid */}
-      {files.length > 0 && (
-        <div className="space-y-4">
-          <p className="text-xs font-semibold uppercase tracking-wider text-slate-500">
-            {files.length} file{files.length > 1 ? "s" : ""} queued
-          </p>
+              {/* Supported formats */}
+              <div className="flex flex-wrap justify-center gap-2 mb-6">
+                {["PNG", "JPG", "WEBP", "TIFF", "Scanned PDF"].map((fmt) => (
+                  <span key={fmt} className="px-2.5 py-1 rounded-full bg-slate-800 border border-slate-700 text-[11px] text-slate-400 font-mono">
+                    {fmt}
+                  </span>
+                ))}
+              </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            {files.map((f) => (
-              <div key={f.id} className="relative rounded-xl border border-slate-700 bg-slate-800/40 overflow-hidden group">
-                {f.preview ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={f.preview} alt={f.name} className="w-full h-28 object-cover" />
-                ) : (
-                  <div className="w-full h-28 flex items-center justify-center bg-slate-900/50">
-                    <FileText className="w-8 h-8 text-slate-600" />
+              {/* Drop zone */}
+              <div
+                onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+                onDragLeave={() => setDragging(false)}
+                onDrop={(e) => { e.preventDefault(); setDragging(false); addFiles(e.dataTransfer.files); }}
+                onClick={() => inputRef.current?.click()}
+                className={`border-2 border-dashed rounded-2xl p-12 text-center cursor-pointer transition-all duration-200 ${
+                  dragging
+                    ? "border-emerald-500 bg-emerald-600/10 scale-[1.01]"
+                    : "border-slate-700 hover:border-emerald-500/40 hover:bg-slate-800/20"
+                }`}
+              >
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mx-auto mb-4 border transition-all ${dragging ? "bg-emerald-600/20 border-emerald-500/40" : "bg-slate-800 border-slate-700"}`}>
+                  <Upload size={18} className={dragging ? "text-emerald-400" : "text-slate-500"} />
+                </div>
+                <p className="text-slate-200 font-semibold mb-1">Drop images or scanned PDFs</p>
+                <p className="text-slate-500 text-sm">Multiple files supported</p>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/*,.pdf"
+                  multiple
+                  title="Select images or PDFs for OCR"
+                  className="hidden"
+                  onChange={(e) => { if (e.target.files) addFiles(e.target.files); }}
+                />
+              </div>
+
+              {/* Feature hints */}
+              <div className="grid grid-cols-2 gap-3 mt-6">
+                {[
+                  { icon: ScanText, title: "High-accuracy OCR", desc: "Tesseract or Google Vision" },
+                  { icon: Zap, title: "Feeds Doc Generator", desc: "Extracted text as source material" },
+                ].map((item) => (
+                  <div key={item.title} className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-800 bg-slate-900/40">
+                    <item.icon size={13} className="text-emerald-400 mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-[0.72rem] font-semibold text-slate-300">{item.title}</p>
+                      <p className="text-[0.65rem] text-slate-600 mt-0.5">{item.desc}</p>
+                    </div>
                   </div>
-                )}
-                <div className="px-3 py-2">
-                  <p className="text-xs text-slate-300 truncate">{f.name}</p>
-                  <p className="text-[10px] text-slate-600">{formatBytes(f.size)}</p>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="space-y-5 animate-fade-in-up">
+              {/* Page header */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-emerald-600/20 border border-emerald-500/30 flex items-center justify-center">
+                    <ScanText size={16} className="text-emerald-400" />
+                  </div>
+                  <div>
+                    <h1 className="text-lg font-bold text-slate-100">OCR Ingestion</h1>
+                    <p className="text-xs text-slate-500">{files.length} file{files.length > 1 ? "s" : ""} queued for extraction</p>
+                  </div>
                 </div>
                 <button
-                  onClick={() => remove(f.id)}
-                  className="absolute top-2 right-2 w-5 h-5 rounded-full bg-slate-900/80 text-slate-400 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  type="button"
+                  onClick={() => inputRef.current?.click()}
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium text-slate-400 border border-slate-700 hover:bg-slate-800 hover:text-slate-200 transition-colors"
                 >
-                  <X className="w-3 h-3" />
+                  <Upload size={11} />
+                  Add more
                 </button>
+                <input
+                  ref={inputRef}
+                  type="file"
+                  accept="image/*,.pdf"
+                  multiple
+                  title="Add more files"
+                  className="hidden"
+                  onChange={(e) => { if (e.target.files) addFiles(e.target.files); }}
+                />
               </div>
-            ))}
-          </div>
 
-          <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/40 space-y-2">
-            <div className="flex items-center gap-2 text-emerald-500/80">
-              <ImageIcon className="w-4 h-4" />
-              <span className="font-medium text-xs uppercase tracking-wider">OCR Engine</span>
+              {/* Preview grid */}
+              <div className="grid grid-cols-2 gap-3">
+                {files.map((f) => (
+                  <div key={f.id} className="relative rounded-xl border border-slate-700 bg-slate-800/40 overflow-hidden group">
+                    {f.preview ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img src={f.preview} alt={f.name} className="w-full h-28 object-cover" />
+                    ) : (
+                      <div className="w-full h-28 flex items-center justify-center bg-slate-900/50">
+                        <FileText size={24} className="text-slate-600" />
+                      </div>
+                    )}
+                    <div className="px-3 py-2">
+                      <p className="text-xs text-slate-300 truncate">{f.name}</p>
+                      <p className="text-[10px] text-slate-600">{formatBytes(f.size)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      title="Remove"
+                      onClick={() => remove(f.id)}
+                      className="absolute top-2 right-2 w-5 h-5 rounded-full bg-slate-900/80 text-slate-400 hover:text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <X size={11} />
+                    </button>
+                  </div>
+                ))}
+              </div>
+
+              {/* Processing note */}
+              <div className="p-4 rounded-xl border border-slate-800 bg-slate-900/40 space-y-2">
+                <div className="flex items-center gap-2 text-emerald-400/80">
+                  <ImageIcon size={12} />
+                  <span className="font-semibold text-xs uppercase tracking-wider">OCR Engine</span>
+                </div>
+                <p className="text-xs leading-relaxed text-slate-500">
+                  Connect to <code className="text-slate-400">/api/ocr</code> using <code className="text-slate-400">Tesseract.js</code> (browser) or Google Vision / AWS Textract. Extracted text will be forwarded to the Doc Generator as source material.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                className="w-full flex items-center gap-2 px-5 py-3 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-semibold transition-colors shadow-lg shadow-emerald-900/30"
+                onClick={() => alert(`Connect to /api/ocr to process ${files.length} file(s).`)}
+              >
+                <ScanText size={15} />
+                Extract Text from {files.length} File{files.length > 1 ? "s" : ""}
+                <ChevronRight size={15} className="ml-auto" />
+              </button>
             </div>
-            <p className="text-xs leading-relaxed text-slate-500">
-              Connect to <code>/api/ocr</code> using <code>Tesseract.js</code> (browser) or Google Vision / AWS Textract for high-accuracy extraction.
-              Extracted text will be forwarded to the Doc Generator as source material.
-            </p>
-          </div>
-
-          <button
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-sm font-medium transition-colors"
-            onClick={() => alert(`Connect to /api/ocr to process ${files.length} file(s).`)}
-          >
-            <ScanText className="w-4 h-4" />
-            Extract Text
-            <ChevronRight className="w-4 h-4 ml-auto" />
-          </button>
+          )}
         </div>
-      )}
+      </div>
     </div>
   );
 }

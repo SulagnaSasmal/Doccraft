@@ -53,7 +53,7 @@ export default function DocumentLibrary({ history, onRestore, onRemove, onClearA
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800/60">
+      <div className="flex items-center justify-between px-6 py-5">
         <div className="flex items-center gap-3">
           <h2 className="text-base font-semibold text-slate-100">Document Library</h2>
           {history.length > 0 && (
@@ -88,7 +88,7 @@ export default function DocumentLibrary({ history, onRestore, onRemove, onClearA
           {history.length === 0 ? (
             /* Empty state */
             <div className="flex flex-col items-center justify-center py-20 text-center">
-              <div className="w-16 h-16 rounded-2xl bg-slate-800/60 border border-slate-700/50
+              <div className="w-16 h-16 rounded-2xl bg-slate-900/50 border border-slate-800
                               flex items-center justify-center mb-4">
                 <FileText size={28} className="text-slate-600" />
               </div>
@@ -107,8 +107,8 @@ export default function DocumentLibrary({ history, onRestore, onRemove, onClearA
                   <Card
                     key={session.id}
                     className="group relative flex flex-col gap-3 p-4 cursor-pointer
-                               bg-slate-800/40 border-slate-700/40 rounded-xl
-                               hover:border-blue-500/40 hover:bg-slate-800/70
+                               bg-slate-900/50 border-slate-800 rounded-xl
+                               hover:border-blue-500/30 hover:bg-slate-900/80
                                transition-all duration-150 shadow-none"
                     onClick={() => onRestore(session)}
                   >
