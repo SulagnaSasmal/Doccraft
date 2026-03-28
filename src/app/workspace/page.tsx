@@ -31,7 +31,8 @@ function WorkspaceViewer() {
   const file = searchParams.get("file") ?? "index.html";
   const highlight = searchParams.get("highlight");
   const title = FILE_TITLES[file] ?? file;
-  const src = `/api/local-doc?file=${encodeURIComponent(file)}`;
+  const BASE = "https://sulagnasasmal.github.io/doccraft-help-center";
+  const src = `${BASE}/${encodeURIComponent(file)}`;
   const kind = fileType(file);
 
   return (
@@ -81,7 +82,7 @@ function WorkspaceViewer() {
         src={src}
         className="flex-1 w-full border-none"
         title={title}
-        sandbox="allow-same-origin allow-scripts"
+        sandbox="allow-same-origin allow-scripts allow-popups allow-forms"
       />
 
       {/* ── Floating Action Bar ── */}

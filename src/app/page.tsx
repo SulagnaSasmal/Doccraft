@@ -771,11 +771,11 @@ export default function Home() {
 
         {/* Right: Insights panel */}
         <aside
-          className="w-[196px] shrink-0 flex flex-col overflow-hidden border-l border-slate-800/60 glass-panel"
+          className="w-[220px] shrink-0 flex flex-col overflow-hidden border-l border-slate-800/60 bg-slate-900/80"
         >
           <div className="px-4 py-3.5 border-b border-slate-800/60">
-            <h2 className="text-[0.78rem] font-semibold uppercase tracking-widest text-slate-400">
-              Insights
+            <h2 className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-500">
+              Document Insights
             </h2>
           </div>
           <div className="flex-1 overflow-auto px-3 py-3 space-y-3">
@@ -853,6 +853,35 @@ export default function Home() {
                   {fileNames.length} source{fileNames.length > 1 ? "s" : ""} loaded
                 </p>
               )}
+            </div>
+
+            {/* Help Center quick links */}
+            <div className="px-3 py-2.5 bg-slate-800/30 border border-slate-700/40 rounded-xl">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                Help Center
+              </p>
+              <div className="space-y-0.5">
+                {[
+                  { label: "Getting Started", file: "getting-started.html" },
+                  { label: "Workflow Guides", file: "workflows.html" },
+                  { label: "Generating Docs", file: "feature-generate.html" },
+                  { label: "UI Reference", file: "ui-reference.html" },
+                  { label: "FAQ", file: "faq.html" },
+                  { label: "Troubleshooting", file: "troubleshooting.html" },
+                  { label: "Release Notes", file: "release-notes.html" },
+                ].map((item) => (
+                  <a
+                    key={item.file}
+                    href={`/workspace?file=${item.file}`}
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-700/50 transition-colors group"
+                  >
+                    <span className="w-1 h-1 rounded-full bg-slate-600 group-hover:bg-blue-400 transition-colors shrink-0" />
+                    <span className="text-[0.68rem] text-slate-400 group-hover:text-slate-200 transition-colors truncate">
+                      {item.label}
+                    </span>
+                  </a>
+                ))}
+              </div>
             </div>
           </div>
         </aside>

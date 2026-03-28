@@ -2,8 +2,6 @@ import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
@@ -34,61 +32,7 @@ export default function RootLayout({
       </head>
       <body className="bg-slate-950 text-slate-50 font-sans">
         <TooltipProvider>
-          <SidebarProvider>
-            <div className="flex h-screen w-full bg-slate-950 text-slate-50 font-sans overflow-hidden">
-              {/* Navigation Sidebar: Workspaces & Documentation */}
-              <AppSidebar />
-
-              <main className="flex-1 flex flex-col overflow-hidden">
-                {/* Top Command Bar */}
-                <header className="h-16 border-b border-slate-800 flex items-center justify-between px-6 shrink-0">
-                  <div className="flex items-center gap-4">
-                    <SidebarTrigger className="text-slate-400 hover:text-slate-100" />
-                    <div className="h-6 w-px bg-slate-800 mx-1" />
-                    <h1 className="text-sm font-medium text-slate-400">
-                      Project /{" "}
-                      <span className="text-slate-100">DocCraft AI</span>
-                    </h1>
-                  </div>
-
-                  <div className="flex items-center gap-3">
-                    {/* CMD+K Search bar */}
-                    <button className="bg-slate-800 text-xs px-3 py-1.5 rounded-md border border-slate-700 text-slate-400 hover:text-slate-200 transition-colors">
-                      Search Docs...{" "}
-                      <kbd className="ml-2 opacity-50">⌘K</kbd>
-                    </button>
-                    {/* Avatar */}
-                    <div className="w-8 h-8 rounded-full bg-blue-600 flex items-center justify-center font-bold text-xs select-none">
-                      SS
-                    </div>
-                  </div>
-                </header>
-
-                {/* Dynamic Content Area */}
-                <section className="flex-1 overflow-y-auto">
-                  {children}
-                </section>
-              </main>
-
-              {/* Right-side Active Intelligence Panel */}
-              <aside className="w-72 border-l border-slate-800 p-6 hidden xl:flex xl:flex-col shrink-0">
-                <h3 className="text-[10px] font-bold uppercase tracking-widest text-slate-500 mb-6">
-                  Document Insights
-                </h3>
-                <div className="space-y-5">
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Compliance Status</p>
-                    <p className="text-sm font-medium text-yellow-500">● Needs Verification (FEMA)</p>
-                  </div>
-                  <div className="h-px bg-slate-800" />
-                  <div>
-                    <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-600 mb-1.5">Active Documents</p>
-                    <p className="text-sm text-slate-500">—</p>
-                  </div>
-                </div>
-              </aside>
-            </div>
-          </SidebarProvider>
+          {children}
         </TooltipProvider>
       </body>
     </html>
