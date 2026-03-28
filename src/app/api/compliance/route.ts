@@ -28,10 +28,12 @@ export async function POST(req: NextRequest) {
       document,
       glossaryData,
       customRules,
+      styleGuide = "mstp",
     }: {
       document: string;
       glossaryData?: GlossaryData;
       customRules?: CustomComplianceRule[];
+      styleGuide?: "mstp" | "google";
     } = body;
 
     if (!document?.trim()) {
@@ -47,13 +49,14 @@ export async function POST(req: NextRequest) {
 
     // ── 1. Terminology issues (synchronous, no API call) ────────────────────
     const termIssues = validateTerminology(document, glossaryData);
+    const guideLabel = styleGuide === "google" ? "Google Developer Style Guide" : "MSTP";
     const terminologyResults: ComplianceIssue[] = termIssues.map((t, i) => ({
       id: `term-${i}`,
       category: "terminology",
       severity: t.issue_type === "forbidden" ? "error" : "suggestion",
       rule: t.issue_type === "forbidden"
-        ? "MSTP: Avoid discouraged words"
-        : "MSTP: Use preferred terminology",
+        ? `${guideLabel}: Avoid discouraged words`
+        : `${guideLabel}: Use preferred terminology`,
       problematic_text: t.term,
       suggestion: t.suggestion
         ? `Replace "${t.term}" with "${t.suggestion}".`
@@ -65,18 +68,43 @@ export async function POST(req: NextRequest) {
     const customRuleIssues = buildCustomRuleIssues(document, normalizedCustomRules);
 
     // ── 2. AI-detected structural / voice / style issues ────────────────────
-    const systemPrompt = `You are an MSTP (Microsoft Style Guide) compliance checker.
+    const mstp_prompt = `You are an MSTP (Microsoft Style Guide) compliance checker.
 
 Analyse the provided documentation and return a JSON array of issues.
 
 Check for:
 - VOICE: passive voice constructions (flag the exact phrase, suggest active rewrite)
 - VOICE: missing second person — steps or instructions not addressed to "you"
+- VOICE: third-person references ("the user should…") that should use second person ("you")
 - STRUCTURE: numbered steps that do NOT start with an imperative verb (do, click, select, open, enter, etc.)
 - STRUCTURE: headings that are NOT in sentence case (only first word and proper nouns capitalised)
+- STRUCTURE: procedure steps that perform more than one action (joined by "and then")
 - STYLE: paragraphs longer than 4 sentences
 - STYLE: informal or overly casual phrases inconsistent with professional docs
-${normalizedCustomRules.length > 0 ? `- CUSTOM: Apply these additional governance rules exactly as written:\n${normalizedCustomRules.map((rule) => `  - ${rule.name} [${rule.severity.toUpperCase()}]: ${rule.instruction}`).join("\n")}` : ""}
+- STYLE: future tense ("will be") in steps that should use present tense
+${normalizedCustomRules.length > 0 ? `- CUSTOM: Apply these additional governance rules exactly as written:\n${normalizedCustomRules.map((rule) => `  - ${rule.name} [${rule.severity.toUpperCase()}]: ${rule.instruction}`).join("\n")}` : ""}`;
+
+    const google_prompt = `You are a Google Developer Style Guide compliance checker.
+
+Analyse the provided documentation and return a JSON array of issues.
+
+Check for:
+- VOICE: passive voice constructions (flag the exact phrase, suggest active rewrite)
+- VOICE: missing second person — steps or instructions not addressed to "you"
+- VOICE: third-person references ("the user should…") that should use second person
+- TENSE: past or future tense in procedures — use present tense ("Click Save", not "You will click Save")
+- STRUCTURE: numbered steps that do NOT start with an imperative verb
+- STRUCTURE: headings that are NOT in sentence case
+- STRUCTURE: code samples that are not in code fences
+- STYLE: Latin abbreviations (e.g., i.e., e.g., etc.) — spell them out
+- STYLE: use of "launch" for apps — prefer "open"
+- STYLE: use of "hit" for keyboard keys — prefer "press"
+- STYLE: missing Oxford comma in lists of three or more items
+- STYLE: paragraphs longer than 5 sentences
+- STYLE: use of "please" in instructions
+${normalizedCustomRules.length > 0 ? `- CUSTOM: Apply these additional governance rules exactly as written:\n${normalizedCustomRules.map((rule) => `  - ${rule.name} [${rule.severity.toUpperCase()}]: ${rule.instruction}`).join("\n")}` : ""}`;
+
+    const systemPrompt = `${styleGuide === "google" ? google_prompt : mstp_prompt}
 
 Each issue object must have exactly these fields:
 {

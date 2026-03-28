@@ -102,6 +102,7 @@ export default function DocumentEditor({
   const [showRules, setShowRules] = useState(false);
   const [customRules, setCustomRules] = useState<CustomComplianceRule[]>([]);
   const [showLinting, setShowLinting] = useState(false);
+  const [styleGuide, setStyleGuide] = useState<"mstp" | "google">("mstp");
   const [inlineToolbar, setInlineToolbar] = useState<{ top: number; left: number } | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -388,6 +389,7 @@ ${bodyHTML}
           document: doc,
           glossaryData: glossaryData ?? null,
           customRules,
+          styleGuide,
         }),
       });
       if (!res.ok) throw new Error("Compliance check failed");
@@ -575,30 +577,52 @@ ${bodyHTML}
             Diagram
           </button>
 
-          {/* MSTP Check button */}
-          <button
-            onClick={handleComplianceCheck}
-            disabled={complianceLoading}
-            className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg
-                        transition-colors disabled:opacity-40 border
-                        ${showCompliance && complianceRan
-                          ? "bg-brand-50 text-brand-700 border-brand-200"
-                          : "text-ink-2 hover:bg-surface-2 border-surface-3"
-                        }`}
-          >
-            {complianceLoading
-              ? <Loader2 size={13} className="animate-spin" />
-              : <ShieldCheck size={13} />
-            }
-            MSTP Check
-            {complianceRan && badgeColor && (
-              <span className={`absolute -top-1.5 -right-1.5 min-w-[1.1rem] h-[1.1rem] px-1
-                               rounded-full text-[0.6rem] font-bold flex items-center justify-center
-                               ${badgeColor}`}>
-                {issueCount > 0 ? issueCount : "✓"}
-              </span>
-            )}
-          </button>
+          {/* Style guide toggle + Compliance check */}
+          <div className="flex items-center rounded-lg border border-surface-3 overflow-hidden">
+            {/* Style guide selector */}
+            <div className="flex bg-surface-1 border-r border-surface-3">
+              {(["mstp", "google"] as const).map((sg) => (
+                <button
+                  key={sg}
+                  type="button"
+                  onClick={() => setStyleGuide(sg)}
+                  title={sg === "mstp" ? "Microsoft Style Guide" : "Google Developer Style Guide"}
+                  className={`px-2 py-1.5 text-[0.65rem] font-semibold transition-colors uppercase tracking-wide ${
+                    styleGuide === sg
+                      ? "bg-brand-700 text-white"
+                      : "text-ink-3 hover:text-ink-1 hover:bg-surface-2"
+                  }`}
+                >
+                  {sg === "mstp" ? "MSTP" : "Google"}
+                </button>
+              ))}
+            </div>
+            {/* Compliance check trigger */}
+            <button
+              type="button"
+              onClick={handleComplianceCheck}
+              disabled={complianceLoading}
+              className={`relative flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium
+                          transition-colors disabled:opacity-40
+                          ${showCompliance && complianceRan
+                            ? "bg-brand-50 text-brand-700"
+                            : "text-ink-2 hover:bg-surface-2"
+                          }`}
+            >
+              {complianceLoading
+                ? <Loader2 size={13} className="animate-spin" />
+                : <ShieldCheck size={13} />
+              }
+              Check
+              {complianceRan && badgeColor && (
+                <span className={`absolute -top-1.5 -right-1.5 min-w-[1.1rem] h-[1.1rem] px-1
+                                 rounded-full text-[0.6rem] font-bold flex items-center justify-center
+                                 ${badgeColor}`}>
+                  {issueCount > 0 ? issueCount : "✓"}
+                </span>
+              )}
+            </button>
+          </div>
 
           {/* Phase 3: Infographic + Publish + Cloud Save */}
           <button
@@ -709,6 +733,8 @@ ${bodyHTML}
               <textarea
                 ref={textareaRef}
                 value={content}
+                title="Document markdown editor"
+                aria-label="Document markdown editor"
                 onChange={(e) => onChange(e.target.value)}
                 onMouseUp={handleEditorMouseUp}
                 onKeyUp={handleEditorMouseUp}

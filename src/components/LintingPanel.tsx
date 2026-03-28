@@ -9,6 +9,8 @@ import {
   Eye,
   Loader2,
   RefreshCw,
+  Download,
+  BookOpen,
 } from "lucide-react";
 
 export interface LintIssue {
@@ -21,7 +23,70 @@ export interface LintIssue {
   length: number;
 }
 
-// ---- CLIENT-SIDE LINTING RULES ----
+// ─── Readability ──────────────────────────────────────────────────────────────
+
+function countSyllables(word: string): number {
+  word = word.toLowerCase().replace(/[^a-z]/g, "");
+  if (word.length === 0) return 0;
+  if (word.length <= 3) return 1;
+  word = word.replace(/(?:[^laeiouy]es|ed|[^laeiouy]e)$/, "");
+  word = word.replace(/^y/, "");
+  const matches = word.match(/[aeiouy]{1,2}/g);
+  return matches ? Math.max(1, matches.length) : 1;
+}
+
+interface ReadabilityStats {
+  fleschEase: number;
+  wordCount: number;
+  sentenceCount: number;
+  avgSentenceLength: number;
+  avgSyllablesPerWord: number;
+}
+
+function calcReadability(content: string): ReadabilityStats | null {
+  // Strip markdown formatting before analysis
+  const text = content
+    .replace(/```[\s\S]*?```/g, " ")
+    .replace(/`[^`]+`/g, " ")
+    .replace(/#{1,6}\s+.+/g, " ")
+    .replace(/[*_~|>]/g, " ")
+    .replace(/\[([^\]]+)\]\([^)]+\)/g, "$1")
+    .replace(/!\[[^\]]*\]\([^)]+\)/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  const sentences = text.split(/[.!?]+/).filter((s) => s.trim().split(/\s+/).length > 3);
+  const words = text.split(/\s+/).filter((w) => w.replace(/[^a-zA-Z]/g, "").length > 0);
+
+  if (words.length < 10 || sentences.length === 0) return null;
+
+  const syllableCount = words.reduce((sum, w) => sum + countSyllables(w), 0);
+  const fleschEase = Math.round(
+    Math.max(0, Math.min(100,
+      206.835
+      - 1.015 * (words.length / sentences.length)
+      - 84.6 * (syllableCount / words.length)
+    ))
+  );
+
+  return {
+    fleschEase,
+    wordCount: words.length,
+    sentenceCount: sentences.length,
+    avgSentenceLength: Math.round(words.length / sentences.length),
+    avgSyllablesPerWord: Math.round((syllableCount / words.length) * 10) / 10,
+  };
+}
+
+function fleschLabel(score: number): { label: string; color: string; bg: string; hint: string } {
+  if (score >= 70) return { label: "Easy", color: "text-accent-green", bg: "bg-green-50", hint: "Well-suited for general audiences" };
+  if (score >= 60) return { label: "Standard", color: "text-accent-green", bg: "bg-green-50", hint: "Good for most technical docs" };
+  if (score >= 50) return { label: "Fairly Difficult", color: "text-accent-amber", bg: "bg-amber-50", hint: "Consider simplifying some sentences" };
+  if (score >= 30) return { label: "Difficult", color: "text-accent-amber", bg: "bg-amber-50", hint: "High reading demand — target: 50–70" };
+  return { label: "Very Difficult", color: "text-accent-red", bg: "bg-red-50", hint: "Very dense — significantly simplify" };
+}
+
+// ─── CLIENT-SIDE LINTING RULES ────────────────────────────────────────────────
 
 function findPassiveVoice(content: string): LintIssue[] {
   const issues: LintIssue[] = [];
@@ -44,7 +109,6 @@ function findPassiveVoice(content: string): LintIssue[] {
 
 function findLongSentences(content: string): LintIssue[] {
   const issues: LintIssue[] = [];
-  // Split on sentence boundaries, track offset
   const sentenceRegex = /[^.!?\n]+[.!?]*/g;
   let m: RegExpExecArray | null;
   while ((m = sentenceRegex.exec(content)) !== null) {
@@ -69,22 +133,25 @@ function findLongSentences(content: string): LintIssue[] {
 function findUndefinedAcronyms(content: string): LintIssue[] {
   const issues: LintIssue[] = [];
   const acronymRegex = /\b([A-Z]{2,6})\b/g;
-  const seen = new Map<string, number>(); // acronym -> first occurrence offset
+  const seen = new Map<string, number>();
   const defined = new Set<string>();
 
-  // First pass: find all definitions (e.g., "Application Programming Interface (API)")
   const defRegex = /[A-Za-z][\w\s]+\(([A-Z]{2,6})\)/g;
   let d: RegExpExecArray | null;
   while ((d = defRegex.exec(content)) !== null) {
     defined.add(d[1]);
   }
 
-  // Second pass: find acronyms used before definition
+  const COMMON = new Set(["AI", "OK", "ID", "UI", "UX", "OR", "IT", "VS", "TO", "AT", "IN",
+    "ON", "IF", "DO", "HTML", "CSS", "JSON", "CSV", "PDF", "URL", "HTTP", "HTTPS", "API",
+    "FAQ", "MD", "SDK", "CLI", "GUI", "CMS", "SLA", "SLO", "KPI", "ROI", "CTA", "SSO",
+    "MFA", "TLS", "SSL", "DNS", "IP", "TCP", "REST", "SOAP", "JWT", "SQL", "AWS", "GCP",
+    "CI", "CD", "VM", "OS", "DB", "QA", "PII", "GDPR", "SaaS", "PaaS", "IaaS"]);
+
   let m: RegExpExecArray | null;
   while ((m = acronymRegex.exec(content)) !== null) {
     const acr = m[1];
-    // Skip common non-acronyms
-    if (["AI", "OK", "ID", "UI", "UX", "OR", "IT", "VS", "TO", "AT", "IN", "ON", "IF", "DO", "HTML", "CSS", "JSON", "CSV", "PDF", "URL", "HTTP", "HTTPS", "API", "FAQ", "MD"].includes(acr)) continue;
+    if (COMMON.has(acr)) continue;
     if (!seen.has(acr)) {
       seen.set(acr, m.index);
       if (!defined.has(acr)) {
@@ -106,28 +173,22 @@ function findUndefinedAcronyms(content: string): LintIssue[] {
 function findMissingIntroduction(content: string): LintIssue[] {
   const lines = content.split("\n").filter((l) => l.trim());
   if (lines.length < 3) return [];
-  // Check if first heading is H1 and there's a paragraph before the next heading
   const firstH1 = lines.findIndex((l) => /^# /.test(l));
   if (firstH1 === -1) return [];
-  const nextHeading = lines.findIndex(
-    (l, i) => i > firstH1 && /^#{1,3} /.test(l)
-  );
+  const nextHeading = lines.findIndex((l, i) => i > firstH1 && /^#{1,3} /.test(l));
   if (nextHeading === -1) return [];
   const bodyBetween = lines.slice(firstH1 + 1, nextHeading).filter((l) => !l.startsWith("#"));
   const introWords = bodyBetween.join(" ").split(/\s+/).filter(Boolean).length;
   if (introWords < 10) {
-    return [
-      {
-        id: "missing-intro",
-        rule: "Missing introduction section",
-        severity: "warning",
-        message:
-          "The document appears to lack an introductory paragraph after the main heading. Add context about what this document covers.",
-        excerpt: lines[firstH1].slice(0, 60),
-        offset: content.indexOf(lines[firstH1]),
-        length: lines[firstH1].length,
-      },
-    ];
+    return [{
+      id: "missing-intro",
+      rule: "Missing introduction",
+      severity: "warning",
+      message: "The document lacks an introductory paragraph after the main heading. Add context about what this document covers.",
+      excerpt: lines[firstH1].slice(0, 60),
+      offset: content.indexOf(lines[firstH1]),
+      length: lines[firstH1].length,
+    }];
   }
   return [];
 }
@@ -143,10 +204,14 @@ function findWordiness(content: string): LintIssue[] {
     [/\bhas the ability to\b/gi, "can"],
     [/\bin close proximity to\b/gi, "near"],
     [/\bwith regard to\b/gi, "about"],
-    [/\bit is important to note that\b/gi, "note:"],
+    [/\bit is important to note that\b/gi, "**Note:**"],
     [/\bprior to\b/gi, "before"],
     [/\bin spite of the fact that\b/gi, "although"],
     [/\bmake use of\b/gi, "use"],
+    [/\bprovide assistance\b/gi, "help"],
+    [/\btake into account\b/gi, "consider"],
+    [/\bmake a decision\b/gi, "decide"],
+    [/\bwith the exception of\b/gi, "except"],
   ];
   for (const [regex, replacement] of patterns) {
     let m: RegExpExecArray | null;
@@ -192,10 +257,9 @@ function findLongUnheadedBlocks(content: string): LintIssue[] {
       wordCount += lines[i].split(/\s+/).filter(Boolean).length;
     }
   }
-  // Check trailing block
   if (foundFirstHeading && wordCount > 400) {
     issues.push({
-      id: `long-block-${blockStart}`,
+      id: `long-block-end`,
       rule: "Heading missing after 400+ words",
       severity: "warning",
       message: `${wordCount} words of body text without a heading break.`,
@@ -213,14 +277,13 @@ function findVagueLanguage(content: string): LintIssue[] {
     /\b(some|various|several|many|a number of|a lot of|numerous|a few|certain)\b(?!\s+(of the|specific|defined))/gi;
   let m: RegExpExecArray | null;
   while ((m = pattern.exec(content)) !== null) {
-    // Skip if inside a heading or code block
     const before = content.slice(Math.max(0, m.index - 5), m.index);
     if (before.includes("#") || before.includes("`")) continue;
     issues.push({
       id: `vague-${m.index}`,
       rule: "Vague language",
       severity: "info",
-      message: `"${m[0]}" is vague — consider specifying an exact quantity or listing specifics.`,
+      message: `"${m[0]}" is vague — specify an exact quantity or list specifics.`,
       excerpt: content.slice(Math.max(0, m.index - 20), m.index + m[0].length + 20),
       offset: m.index,
       length: m[0].length,
@@ -232,38 +295,222 @@ function findVagueLanguage(content: string): LintIssue[] {
 function findMissingCodeExample(content: string, docType: string): LintIssue[] {
   if (docType !== "api-reference") return [];
   if (/```[\s\S]*?```/.test(content) || /`[^`]+`/.test(content)) return [];
-  return [
-    {
-      id: "missing-code",
-      rule: "Missing code example",
-      severity: "error",
-      message:
-        "API reference documents should include at least one code example.",
-      excerpt: "No code blocks found",
-      offset: 0,
-      length: 0,
-    },
-  ];
+  return [{
+    id: "missing-code",
+    rule: "Missing code example",
+    severity: "error",
+    message: "API reference documents should include at least one code example.",
+    excerpt: "No code blocks found",
+    offset: 0,
+    length: 0,
+  }];
 }
 
 function findMissingSteps(content: string, docType: string): LintIssue[] {
   if (!["user-guide", "quick-start", "troubleshooting"].includes(docType)) return [];
   if (/^\d+\.\s/m.test(content) || /^(Step\s+\d)/mi.test(content)) return [];
-  return [
-    {
-      id: "missing-steps",
-      rule: "Missing numbered steps",
-      severity: "warning",
-      message:
-        "This document type typically includes numbered steps or a procedure. Consider adding a step-by-step section.",
-      excerpt: "No numbered list found",
-      offset: 0,
-      length: 0,
-    },
-  ];
+  return [{
+    id: "missing-steps",
+    rule: "Missing numbered steps",
+    severity: "warning",
+    message: "This document type typically includes numbered steps or a procedure. Consider adding a step-by-step section.",
+    excerpt: "No numbered list found",
+    offset: 0,
+    length: 0,
+  }];
 }
 
-// Score calculation
+// ─── NEW: Bad link text ───────────────────────────────────────────────────────
+
+function findBadLinkText(content: string): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const patterns: [RegExp, string][] = [
+    [/\[click here\]/gi, 'Use descriptive link text — describe the destination instead of "click here"'],
+    [/\[here\]/gi, '"here" is not descriptive — use the page or section title as the link text'],
+    [/\[this page\]/gi, '"this page" is vague — use the page title as link text'],
+    [/\[this link\]/gi, '"this link" is vague — use the destination name as link text'],
+    [/\[this article\]/gi, '"this article" is vague — use the article title as link text'],
+    [/\[read more\]/gi, '"Read more" is vague — describe what the reader will learn'],
+    [/\[learn more\]/gi, '"Learn more" is vague — describe what the reader will learn'],
+    [/\[more information\]/gi, 'Use a specific link label instead of "more information"'],
+  ];
+  for (const [regex, msg] of patterns) {
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(content)) !== null) {
+      issues.push({
+        id: `link-${m.index}`,
+        rule: "Non-descriptive link text",
+        severity: "warning",
+        message: msg,
+        excerpt: m[0],
+        offset: m.index,
+        length: m[0].length,
+      });
+    }
+  }
+  return issues;
+}
+
+// ─── NEW: Callout format enforcement ─────────────────────────────────────────
+
+function findBadCallouts(content: string): LintIssue[] {
+  const issues: LintIssue[] = [];
+  // Flag ALL-CAPS callout keywords not formatted per MSTP (bold + colon)
+  const badPatterns: [RegExp, string, string][] = [
+    [/^NOTE:/gm, "NOTE:", "**Note:**"],
+    [/^WARNING:/gm, "WARNING:", "**Warning:**"],
+    [/^CAUTION:/gm, "CAUTION:", "**Caution:**"],
+    [/^TIP:/gm, "TIP:", "**Tip:**"],
+    [/^IMPORTANT:/gm, "IMPORTANT:", "**Important:**"],
+    // Also catch lowercase without bold
+    [/^note:/gm, "note:", "**Note:**"],
+    [/^warning:/gm, "warning:", "**Warning:**"],
+    [/^caution:/gm, "caution:", "**Caution:**"],
+    [/^tip:/gm, "tip:", "**Tip:**"],
+    [/^important:/gm, "important:", "**Important:**"],
+  ];
+  for (const [regex, found, expected] of badPatterns) {
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(content)) !== null) {
+      issues.push({
+        id: `callout-${m.index}`,
+        rule: "Callout format",
+        severity: "warning",
+        message: `Use "${expected}" (bold + colon) per MSTP callout format, not "${found}"`,
+        excerpt: m[0],
+        offset: m.index,
+        length: m[0].length,
+      });
+    }
+  }
+  return issues;
+}
+
+// ─── NEW: Number formatting ───────────────────────────────────────────────────
+
+function findNumberFormatting(content: string): LintIssue[] {
+  const issues: LintIssue[] = [];
+  // MSTP: numbers 10 and above should use numerals, not words
+  const largeWords = [
+    "ten", "eleven", "twelve", "thirteen", "fourteen", "fifteen",
+    "sixteen", "seventeen", "eighteen", "nineteen", "twenty",
+    "thirty", "forty", "fifty", "sixty", "seventy", "eighty", "ninety",
+    "hundred", "thousand", "million", "billion",
+  ];
+  // Only flag when NOT at start of sentence and NOT inside a heading
+  const pattern = new RegExp(`\\b(${largeWords.join("|")})\\b`, "gi");
+  let m: RegExpExecArray | null;
+  while ((m = pattern.exec(content)) !== null) {
+    const before = content.slice(Math.max(0, m.index - 80), m.index);
+    // Skip if at start of sentence (preceded by . or newline)
+    if (/[.!?\n]\s*$/.test(before)) continue;
+    // Skip if inside a heading
+    const lineStart = content.lastIndexOf("\n", m.index);
+    const lineContent = content.slice(lineStart + 1, m.index);
+    if (/^#{1,6}\s/.test(lineContent.trimStart())) continue;
+    // Skip if inside a code block
+    const codesBefore = (content.slice(0, m.index).match(/```/g) || []).length;
+    if (codesBefore % 2 !== 0) continue;
+
+    issues.push({
+      id: `num-${m.index}`,
+      rule: "Number formatting",
+      severity: "info",
+      message: `MSTP: use numerals for numbers 10 and above — replace "${m[0]}" with its digit form.`,
+      excerpt: m[0],
+      offset: m.index,
+      length: m[0].length,
+    });
+  }
+  return issues;
+}
+
+// ─── NEW: Parallel structure in lists ────────────────────────────────────────
+
+function findParallelStructure(content: string): LintIssue[] {
+  const issues: LintIssue[] = [];
+  // Find consecutive list blocks (3+ items)
+  const lines = content.split("\n");
+  let listStart = -1;
+  let listItems: Array<{ text: string; lineIdx: number }> = [];
+
+  const checkBlock = () => {
+    if (listItems.length < 3) return;
+    // Check: inconsistent trailing punctuation
+    const endsWithPeriod = listItems.map((item) => /[.!?]$/.test(item.text.trim()));
+    const hasperiod = endsWithPeriod.filter(Boolean).length;
+    if (hasperiod > 0 && hasperiod < listItems.length) {
+      const offset = content.indexOf(listItems[0].text);
+      issues.push({
+        id: `parallel-punct-${listStart}`,
+        rule: "Inconsistent list punctuation",
+        severity: "info",
+        message: `Some list items end with punctuation and others don't. Either all items should end with a period or none should.`,
+        excerpt: listItems[0].text.slice(0, 60),
+        offset: offset >= 0 ? offset : 0,
+        length: listItems[0].text.length,
+      });
+    }
+  };
+
+  for (let i = 0; i < lines.length; i++) {
+    const isList = /^(\s*[-*+]|\s*\d+\.)\s/.test(lines[i]);
+    if (isList) {
+      if (listStart === -1) listStart = i;
+      // Strip the bullet/number prefix to get item content
+      listItems.push({ text: lines[i].replace(/^\s*[-*+\d.]+\s+/, ""), lineIdx: i });
+    } else {
+      if (listItems.length > 0) {
+        checkBlock();
+        listStart = -1;
+        listItems = [];
+      }
+    }
+  }
+  if (listItems.length > 0) checkBlock();
+  return issues;
+}
+
+// ─── NEW: Gender-neutral language ─────────────────────────────────────────────
+
+function findGenderLanguage(content: string): LintIssue[] {
+  const issues: LintIssue[] = [];
+  const patterns: [RegExp, string][] = [
+    [/\bhe\s+(?:is|was|has|had|will|would|can|could|should|shall|may|might|does|did)\b/gi, 'Use "they" — MSTP recommends gender-neutral language'],
+    [/\bshe\s+(?:is|was|has|had|will|would|can|could|should|shall|may|might|does|did)\b/gi, 'Use "they" — MSTP recommends gender-neutral language'],
+    [/\bhis\s+(?:own|[a-z])/gi, 'Use "their" — MSTP recommends gender-neutral language'],
+    [/\bher\s+(?:own|[a-z])/gi, 'Use "their" — MSTP recommends gender-neutral language'],
+    [/\bhe\/she\b/gi, 'Use "they" instead of "he/she"'],
+    [/\bhis\/her\b/gi, 'Use "their" instead of "his/her"'],
+    [/\bhe or she\b/gi, 'Use "they" instead of "he or she"'],
+    [/\bhim or her\b/gi, 'Use "them" instead of "him or her"'],
+    [/\bhis or her\b/gi, 'Use "their" instead of "his or her"'],
+    [/\bmankind\b/gi, 'Use "humanity" or "people" instead of "mankind"'],
+    [/\bmanpower\b/gi, 'Use "workforce" or "staff" instead of "manpower"'],
+    [/\bman-hours\b/gi, 'Use "person-hours" instead of "man-hours"'],
+  ];
+  for (const [regex, msg] of patterns) {
+    let m: RegExpExecArray | null;
+    while ((m = regex.exec(content)) !== null) {
+      // Skip code blocks
+      const codesBefore = (content.slice(0, m.index).match(/```/g) || []).length;
+      if (codesBefore % 2 !== 0) continue;
+      issues.push({
+        id: `gender-${m.index}`,
+        rule: "Gendered language",
+        severity: "warning",
+        message: msg,
+        excerpt: m[0],
+        offset: m.index,
+        length: m[0].length,
+      });
+    }
+  }
+  return issues;
+}
+
+// ─── Score calculation ────────────────────────────────────────────────────────
+
 function calcScore(issues: LintIssue[]): number {
   let score = 100;
   for (const issue of issues) {
@@ -274,11 +521,65 @@ function calcScore(issues: LintIssue[]): number {
   return Math.max(0, Math.min(100, score));
 }
 
+// ─── Export ───────────────────────────────────────────────────────────────────
+
+function exportLintReport(issues: LintIssue[], score: number, readability: ReadabilityStats | null): void {
+  const lines: string[] = [
+    "# Style Guide Lint Report",
+    `Generated: ${new Date().toLocaleString()}`,
+    `Lint Score: ${score}/100`,
+  ];
+
+  if (readability) {
+    lines.push(
+      "",
+      "## Readability",
+      `- Flesch Reading Ease: ${readability.fleschEase}/100`,
+      `- Word Count: ${readability.wordCount}`,
+      `- Sentence Count: ${readability.sentenceCount}`,
+      `- Avg Sentence Length: ${readability.avgSentenceLength} words`,
+      `- Avg Syllables/Word: ${readability.avgSyllablesPerWord}`,
+    );
+  }
+
+  const errors = issues.filter((i) => i.severity === "error");
+  const warnings = issues.filter((i) => i.severity === "warning");
+  const infos = issues.filter((i) => i.severity === "info");
+
+  lines.push("", `## Summary`, `- Errors: ${errors.length}`, `- Warnings: ${warnings.length}`, `- Suggestions: ${infos.length}`);
+
+  const renderGroup = (label: string, group: LintIssue[]) => {
+    if (group.length === 0) return;
+    lines.push("", `## ${label}`);
+    for (const issue of group) {
+      lines.push(`### ${issue.rule}`);
+      lines.push(`**Message:** ${issue.message}`);
+      if (issue.excerpt) lines.push(`**Excerpt:** \`${issue.excerpt}\``);
+      lines.push("");
+    }
+  };
+  renderGroup("Errors", errors);
+  renderGroup("Warnings", warnings);
+  renderGroup("Suggestions", infos);
+
+  const blob = new Blob([lines.join("\n")], { type: "text/markdown" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `lint-report-${new Date().toISOString().slice(0, 10)}.md`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+// ─── Severity config ──────────────────────────────────────────────────────────
+
 const SEVERITY_CONFIG = {
   error: { color: "text-accent-red", bg: "bg-red-50", border: "border-red-100", label: "Error" },
   warning: { color: "text-accent-amber", bg: "bg-amber-50", border: "border-amber-100", label: "Warning" },
   info: { color: "text-brand-600", bg: "bg-brand-50", border: "border-brand-100", label: "Info" },
 };
+
+// ─── Component ────────────────────────────────────────────────────────────────
 
 export default function LintingPanel({
   content,
@@ -290,9 +591,12 @@ export default function LintingPanel({
   onHighlight: (offset: number, length: number) => void;
 }) {
   const [expanded, setExpanded] = useState(true);
+  const [readabilityExpanded, setReadabilityExpanded] = useState(false);
   const [semanticIssues, setSemanticIssues] = useState<LintIssue[]>([]);
   const [loadingSemantic, setLoadingSemantic] = useState(false);
   const [semanticRan, setSemanticRan] = useState(false);
+
+  const readabilityStats = useMemo(() => calcReadability(content), [content]);
 
   const clientIssues = useMemo(() => {
     if (!content.trim()) return [];
@@ -306,6 +610,11 @@ export default function LintingPanel({
       ...findVagueLanguage(content),
       ...findMissingCodeExample(content, docType),
       ...findMissingSteps(content, docType),
+      ...findBadLinkText(content),
+      ...findBadCallouts(content),
+      ...findNumberFormatting(content),
+      ...findParallelStructure(content),
+      ...findGenderLanguage(content),
     ];
   }, [content, docType]);
 
@@ -383,26 +692,87 @@ export default function LintingPanel({
 
       {expanded && (
         <div className="border-t border-surface-2">
-          {/* Semantic lint button */}
-          <div className="px-5 py-3 bg-surface-1 border-b border-surface-2 flex items-center justify-between">
-            <span className="text-xs text-ink-2">
+          {/* Readability stats bar */}
+          {readabilityStats && (
+            <div className="px-5 py-3 bg-surface-1/70 border-b border-surface-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); setReadabilityExpanded((v) => !v); }}
+                className="w-full flex items-center justify-between group"
+              >
+                <div className="flex items-center gap-2">
+                  <BookOpen size={12} className="text-brand-500" />
+                  <span className="text-xs font-semibold text-ink-1">Readability</span>
+                  {(() => {
+                    const r = fleschLabel(readabilityStats.fleschEase);
+                    return (
+                      <span className={`px-2 py-0.5 rounded-full text-[0.62rem] font-bold ${r.bg} ${r.color}`}>
+                        {r.label} — {readabilityStats.fleschEase}/100
+                      </span>
+                    );
+                  })()}
+                  <span className="text-[0.68rem] text-ink-3 ml-1">
+                    {readabilityStats.wordCount} words · avg {readabilityStats.avgSentenceLength} words/sentence
+                  </span>
+                </div>
+                <span className="text-[0.65rem] text-ink-4 group-hover:text-ink-2">
+                  {readabilityExpanded ? "hide" : "details"}
+                </span>
+              </button>
+              {readabilityExpanded && (
+                <div className="mt-2.5 grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    { label: "Flesch Ease", value: `${readabilityStats.fleschEase}/100`, hint: "Target: 50–70" },
+                    { label: "Words", value: readabilityStats.wordCount.toLocaleString() },
+                    { label: "Avg Sentence", value: `${readabilityStats.avgSentenceLength} wds`, hint: "Target: <20" },
+                    { label: "Syllables/Word", value: readabilityStats.avgSyllablesPerWord, hint: "Target: <2" },
+                  ].map((stat) => (
+                    <div key={stat.label} className="bg-surface-0 rounded-lg px-3 py-2 border border-surface-3 text-center">
+                      <p className="text-[0.62rem] text-ink-3 uppercase tracking-wide">{stat.label}</p>
+                      <p className="text-sm font-bold text-ink-0 mt-0.5">{stat.value}</p>
+                      {stat.hint && <p className="text-[0.58rem] text-ink-4 mt-0.5">{stat.hint}</p>}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {readabilityExpanded && (
+                <p className="text-[0.62rem] text-ink-4 mt-2">
+                  {fleschLabel(readabilityStats.fleschEase).hint}
+                </p>
+              )}
+            </div>
+          )}
+
+          {/* Toolbar: AI lint + Export */}
+          <div className="px-5 py-3 bg-surface-1 border-b border-surface-2 flex items-center justify-between gap-2">
+            <span className="text-xs text-ink-2 flex-1 min-w-0">
               {semanticRan
                 ? `AI analysis complete — ${semanticIssues.length} additional issue${semanticIssues.length !== 1 ? "s" : ""} found`
                 : "Run AI analysis for semantic rules (terminology, inconsistency)"}
             </span>
-            <button
-              onClick={runSemanticLint}
-              disabled={loadingSemantic}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-700
-                         bg-brand-50 hover:bg-brand-100 rounded-lg transition-colors disabled:opacity-50"
-            >
-              {loadingSemantic ? (
-                <Loader2 size={13} className="animate-spin" />
-              ) : (
-                <RefreshCw size={13} />
-              )}
-              {loadingSemantic ? "Analyzing…" : semanticRan ? "Re-run" : "Run AI Lint"}
-            </button>
+            <div className="flex items-center gap-1.5">
+              <button
+                onClick={() => exportLintReport(allIssues, score, readabilityStats ?? null)}
+                title="Download lint report as Markdown"
+                className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-semibold text-ink-2
+                           bg-surface-0 hover:bg-surface-2 border border-surface-3 rounded-lg transition-colors"
+              >
+                <Download size={12} />
+                Export
+              </button>
+              <button
+                onClick={runSemanticLint}
+                disabled={loadingSemantic}
+                className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold text-brand-700
+                           bg-brand-50 hover:bg-brand-100 rounded-lg transition-colors disabled:opacity-50"
+              >
+                {loadingSemantic ? (
+                  <Loader2 size={13} className="animate-spin" />
+                ) : (
+                  <RefreshCw size={13} />
+                )}
+                {loadingSemantic ? "Analyzing…" : semanticRan ? "Re-run AI" : "Run AI Lint"}
+              </button>
+            </div>
           </div>
 
           {/* Issues list */}
