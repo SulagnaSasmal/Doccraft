@@ -77,7 +77,18 @@ function OcrInner() {
       files.forEach((f) => formData.append("files", f.file));
 
       const res = await fetch("/api/ocr", { method: "POST", body: formData });
-      const data = await res.json();
+
+      let data: { error?: string; results?: OcrFileResult[]; combined?: string } = {};
+      try {
+        data = await res.json();
+      } catch {
+        // Server returned a non-JSON body (e.g. 413 Entity Too Large)
+        const msg = res.status === 413
+          ? "File too large — Vercel's request limit is 4.5 MB. Try a smaller file or split it first."
+          : `Server error (${res.status}). Please try again.`;
+        setApiError(msg);
+        return;
+      }
 
       if (!res.ok) {
         setApiError(data.error ?? "OCR failed. Please try again.");
@@ -367,6 +378,7 @@ function OcrInner() {
                   <div className="relative">
                     <textarea
                       readOnly
+                      title="Extracted text output"
                       value={combined}
                       className="w-full h-48 bg-slate-900/60 border border-slate-700 rounded-xl px-4 py-3 text-xs text-slate-300 font-mono resize-none focus:outline-none"
                     />

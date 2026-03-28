@@ -1,6 +1,7 @@
 "use client";
 
-import { FileText, RotateCcw, Users, LogOut, User, Cloud, HelpCircle, Webhook, Check, Sun, Moon, Search } from "lucide-react";
+import { useState, useRef, useEffect } from "react";
+import { FileText, RotateCcw, Users, LogOut, User, Cloud, HelpCircle, Webhook, Check, Sun, Moon, Search, Scissors, Layers, ScanText, ChevronDown } from "lucide-react";
 import type { AppStage } from "@/app/page";
 
 const STAGE_LABELS: Record<AppStage, string> = {
@@ -10,6 +11,12 @@ const STAGE_LABELS: Record<AppStage, string> = {
   generating: "Generating…",
   editing: "Edit & Export",
 };
+
+const PDF_TOOLS = [
+  { href: "/split", icon: Scissors, label: "Split PDF", desc: "Divide into sections or page ranges", accent: "text-blue-400" },
+  { href: "/merge", icon: Layers, label: "Merge PDFs", desc: "Combine multiple files into one PDF", accent: "text-violet-400" },
+  { href: "/ocr", icon: ScanText, label: "OCR Extraction", desc: "Extract text from scanned images & PDFs", accent: "text-emerald-400" },
+];
 
 export default function Header({
   stage,
@@ -35,6 +42,18 @@ export default function Header({
   onOpenCommandPalette?: () => void;
 }) {
   const stages: AppStage[] = ["upload", "questions", "editing"];
+  const [showTools, setShowTools] = useState(false);
+  const toolsRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (toolsRef.current && !toolsRef.current.contains(e.target as Node)) {
+        setShowTools(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
 
   return (
     <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-900/95 backdrop-blur-md">
@@ -152,6 +171,48 @@ export default function Header({
               <span className="hidden md:inline">Automate</span>
             </button>
           )}
+
+          {/* ── PDF Tools dropdown ── */}
+          <div ref={toolsRef} className="relative">
+            <button
+              type="button"
+              onClick={() => setShowTools((v) => !v)}
+              className="flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium text-slate-400
+                         hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors border border-slate-700/60"
+              title="PDF Tools"
+            >
+              <Scissors size={13} />
+              <span className="hidden md:inline">PDF Tools</span>
+              <ChevronDown size={11} className={`transition-transform ${showTools ? "rotate-180" : ""}`} />
+            </button>
+
+            {showTools && (
+              <div className="absolute right-0 top-full mt-1.5 z-50 w-56 rounded-xl border border-slate-700/60
+                              bg-slate-900 shadow-2xl shadow-black/50 overflow-hidden">
+                <div className="px-3 py-2 border-b border-slate-800">
+                  <p className="text-[0.65rem] font-bold uppercase tracking-widest text-slate-500">PDF Utilities</p>
+                </div>
+                {PDF_TOOLS.map((tool) => (
+                  <a
+                    key={tool.href}
+                    href={tool.href}
+                    onClick={() => setShowTools(false)}
+                    className="flex items-start gap-3 px-3 py-2.5 hover:bg-slate-800/60 transition-colors group"
+                  >
+                    <div className="w-6 h-6 rounded-md bg-slate-800 border border-slate-700/60
+                                    flex items-center justify-center shrink-0 mt-0.5
+                                    group-hover:border-slate-600 transition-colors">
+                      <tool.icon size={12} className={tool.accent} />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[0.75rem] font-semibold text-slate-200 group-hover:text-white">{tool.label}</p>
+                      <p className="text-[0.62rem] text-slate-500 mt-0.5 leading-relaxed">{tool.desc}</p>
+                    </div>
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
 
           <a
             href="https://sulagnasasmal.github.io/doccraft-help-center/"

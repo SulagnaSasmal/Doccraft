@@ -508,7 +508,7 @@ export default function Home() {
       <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0 }}>
 
         {/* Left: Utility Toolbox (always visible) */}
-        <div className="w-[248px] shrink-0 flex flex-col overflow-hidden">
+        <div className="w-[288px] shrink-0 flex flex-col overflow-hidden">
           <UtilityToolbox
             uploadedContent={uploadedContent}
             fileNames={fileNames}
@@ -872,7 +872,9 @@ export default function Home() {
                 ].map((item) => (
                   <a
                     key={item.file}
-                    href={`/workspace?file=${item.file}`}
+                    href={`https://sulagnasasmal.github.io/doccraft-help-center/${item.file}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                     className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-700/50 transition-colors group"
                   >
                     <span className="w-1 h-1 rounded-full bg-slate-600 group-hover:bg-blue-400 transition-colors shrink-0" />

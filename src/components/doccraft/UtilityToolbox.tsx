@@ -1,7 +1,7 @@
 "use client";
 
 import {
-  Scissors, Merge, FileOutput, Upload, ClipboardPaste, X, FileText, Image,
+  Upload, ClipboardPaste, X, FileText, Image,
   Table, FileJson, FileImage, FolderOpen, FolderClosed, ChevronRight,
   ChevronDown, FileCode2, Shield, Wrench, Settings, BookOpen, HardDrive,
 } from "lucide-react";
@@ -37,12 +37,6 @@ const FILE_TYPE_HINTS: Record<string, { label: string; Icon: typeof FileText }> 
   pdf: { label: "PDF", Icon: FileText },
   docx: { label: "Word", Icon: FileText },
 };
-
-const PDF_TOOLS = [
-  { id: "split", label: "Content Atomicizer", icon: Scissors, desc: "Divide into sections or page ranges", href: "/split", accent: "text-blue-400", hoverBg: "hover:bg-blue-600/15 hover:border-blue-500/40" },
-  { id: "merge", label: "Document Assembler", icon: Merge, desc: "Combine multiple files into one", href: "/merge", accent: "text-purple-400", hoverBg: "hover:bg-purple-600/15 hover:border-purple-500/40" },
-  { id: "extract", label: "Precision Extractor", icon: FileOutput, desc: "Pull specific pages out", href: "/ocr", accent: "text-emerald-400", hoverBg: "hover:bg-emerald-600/15 hover:border-emerald-500/40" },
-];
 
 // ── File System Access API types ─────────────────────────────────────────────
 interface FsNode {
@@ -93,18 +87,20 @@ function Section({
   badge?: string;
 }) {
   return (
-    <div className="border border-slate-800 rounded-xl overflow-hidden">
+    <div className="border border-slate-800/60 rounded-xl overflow-hidden bg-slate-900/40">
       <button
         type="button"
         onClick={() => onToggle(id)}
-        className="w-full flex items-center gap-2.5 px-3 py-2.5 bg-slate-800/50 hover:bg-slate-800 transition-colors text-left"
+        className="w-full flex items-center gap-3 px-3.5 py-3 bg-slate-800/40 hover:bg-slate-800/70 transition-colors text-left"
       >
-        <Icon size={13} className={`${accent} shrink-0`} />
-        <span className="flex-1 text-xs font-semibold text-slate-300">
+        <div className="w-5 h-5 rounded-md bg-slate-700/60 flex items-center justify-center shrink-0">
+          <Icon size={11} className={`${accent} shrink-0`} />
+        </div>
+        <span className="flex-1 text-[0.78rem] font-semibold text-slate-200 tracking-tight">
           {label}
         </span>
         {badge && (
-          <span className="px-1.5 py-0.5 rounded-md bg-blue-600/20 border border-blue-700/40 text-blue-400 text-[0.6rem] font-bold">
+          <span className="px-1.5 py-0.5 rounded-full bg-blue-600/20 border border-blue-700/40 text-blue-400 text-[0.6rem] font-bold">
             {badge}
           </span>
         )}
@@ -114,7 +110,7 @@ function Section({
         />
       </button>
       {expanded && (
-        <div className="px-3 py-3 bg-slate-900/60 border-t border-slate-800/60">
+        <div className="px-3.5 py-3.5 border-t border-slate-800/60">
           {children}
         </div>
       )}
@@ -146,7 +142,7 @@ export default function UtilityToolbox({
 
   // Default expanded sections
   const [expanded, setExpanded] = useState<Set<string>>(
-    new Set(["source", "tools"])
+    new Set(["source", "config"])
   );
 
   const toggleSection = (id: string) => {
@@ -282,24 +278,29 @@ export default function UtilityToolbox({
   const showRecommendation = recommendation && !recDismissed && uploadedContent.length > 0;
 
   return (
-    <aside className="flex flex-col h-full border-r border-slate-800 bg-slate-900">
+    <aside className="flex flex-col h-full border-r border-slate-800/80 bg-slate-950">
       {/* ── Header ── */}
-      <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-2.5 bg-slate-900/80">
-        <div className="w-6 h-6 rounded-md bg-blue-600/25 border border-blue-500/30 flex items-center justify-center shrink-0">
-          <Wrench size={11} className="text-blue-400" />
+      <div className="px-4 py-3.5 border-b border-slate-800/80 flex items-center gap-3 bg-slate-900/60">
+        <div className="w-7 h-7 rounded-lg bg-blue-600/20 border border-blue-500/30 flex items-center justify-center shrink-0">
+          <Wrench size={13} className="text-blue-400" />
         </div>
-        <h2 className="text-sm font-semibold text-slate-200 tracking-tight">
-          Utility Toolbox
-        </h2>
+        <div className="min-w-0">
+          <h2 className="text-[0.82rem] font-bold text-slate-100 tracking-tight leading-none">
+            Doc Generator
+          </h2>
+          <p className="text-[0.6rem] text-slate-500 tracking-wide uppercase font-medium mt-0.5">
+            Configure &amp; Analyze
+          </p>
+        </div>
         {fileNames.length > 0 && (
-          <span className="ml-auto px-1.5 py-0.5 rounded-md bg-emerald-600/20 border border-emerald-700/40 text-emerald-400 text-[0.6rem] font-bold">
-            {fileNames.length} src
+          <span className="ml-auto px-2 py-0.5 rounded-full bg-emerald-600/15 border border-emerald-700/30 text-emerald-400 text-[0.6rem] font-bold shrink-0">
+            {fileNames.length} loaded
           </span>
         )}
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="px-3 py-3 space-y-2">
+        <div className="px-3 py-3 space-y-2.5">
 
           {/* ── Source Material ─────────────────────────────── */}
           <Section
@@ -419,41 +420,6 @@ export default function UtilityToolbox({
                   ))}
                 </div>
               )}
-            </div>
-          </Section>
-
-          {/* ── Processing Engine ─────────────────────────── */}
-          <Section
-            id="tools"
-            label="Processing Engine"
-            icon={Wrench}
-            accent="text-slate-400"
-            expanded={expanded.has("tools")}
-            onToggle={toggleSection}
-          >
-            <div className="space-y-1.5">
-              {PDF_TOOLS.map(({ id, label, icon: Icon, desc, href, accent, hoverBg }) => (
-                <a
-                  key={id}
-                  href={href}
-                  className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-xl
-                             text-left transition-all duration-150
-                             bg-slate-800/40 ${hoverBg}
-                             border border-slate-700/40 group`}
-                >
-                  <span className={`w-7 h-7 rounded-lg bg-slate-700/60 group-hover:bg-slate-700/80
-                                   flex items-center justify-center shrink-0 transition-colors`}>
-                    <Icon size={13} className={accent} />
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block text-[0.75rem] font-medium text-slate-200 group-hover:text-white">
-                      {label}
-                    </span>
-                    <span className="block text-[0.62rem] text-slate-500 truncate">{desc}</span>
-                  </span>
-                  <ChevronRight size={11} className="text-slate-700 group-hover:text-slate-400 ml-auto shrink-0 transition-colors" />
-                </a>
-              ))}
             </div>
           </Section>
 
