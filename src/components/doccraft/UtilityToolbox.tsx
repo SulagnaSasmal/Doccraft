@@ -93,28 +93,28 @@ function Section({
   badge?: string;
 }) {
   return (
-    <div className="border border-slate-800/60 rounded-xl overflow-hidden">
+    <div className="border border-slate-800 rounded-xl overflow-hidden">
       <button
         type="button"
         onClick={() => onToggle(id)}
-        className="w-full flex items-center gap-2.5 px-3 py-2.5 bg-slate-900/60 hover:bg-slate-800/60 transition-colors text-left"
+        className="w-full flex items-center gap-2.5 px-3 py-2.5 bg-slate-800/50 hover:bg-slate-800 transition-colors text-left"
       >
         <Icon size={13} className={`${accent} shrink-0`} />
-        <span className="flex-1 text-[0.72rem] font-semibold uppercase tracking-wider text-slate-400">
+        <span className="flex-1 text-xs font-semibold text-slate-300">
           {label}
         </span>
         {badge && (
-          <span className="px-1.5 py-0.5 rounded-md bg-blue-600/20 text-blue-400 text-[0.6rem] font-bold">
+          <span className="px-1.5 py-0.5 rounded-md bg-blue-600/20 border border-blue-700/40 text-blue-400 text-[0.6rem] font-bold">
             {badge}
           </span>
         )}
         <ChevronDown
           size={12}
-          className={`text-slate-600 transition-transform duration-200 shrink-0 ${expanded ? "" : "-rotate-90"}`}
+          className={`text-slate-500 transition-transform duration-200 shrink-0 ${expanded ? "" : "-rotate-90"}`}
         />
       </button>
       {expanded && (
-        <div className="px-3 py-3 bg-slate-950/40">
+        <div className="px-3 py-3 bg-slate-900/60 border-t border-slate-800/60">
           {children}
         </div>
       )}
@@ -282,24 +282,17 @@ export default function UtilityToolbox({
   const showRecommendation = recommendation && !recDismissed && uploadedContent.length > 0;
 
   return (
-    <aside
-      className="flex flex-col h-full border-r border-slate-800/60"
-      style={{
-        background: "rgba(15,23,41,0.72)",
-        backdropFilter: "blur(16px)",
-        WebkitBackdropFilter: "blur(16px)",
-      }}
-    >
+    <aside className="flex flex-col h-full border-r border-slate-800 bg-slate-900">
       {/* ── Header ── */}
-      <div className="px-4 py-3.5 border-b border-slate-800/60 flex items-center gap-2.5">
-        <div className="w-5 h-5 rounded-md bg-blue-600/20 flex items-center justify-center">
-          <Wrench size={10} className="text-blue-400" />
+      <div className="px-4 py-3 border-b border-slate-800 flex items-center gap-2.5 bg-slate-900/80">
+        <div className="w-6 h-6 rounded-md bg-blue-600/25 border border-blue-500/30 flex items-center justify-center shrink-0">
+          <Wrench size={11} className="text-blue-400" />
         </div>
-        <h2 className="text-[0.78rem] font-semibold uppercase tracking-widest text-slate-400">
+        <h2 className="text-sm font-semibold text-slate-200 tracking-tight">
           Utility Toolbox
         </h2>
         {fileNames.length > 0 && (
-          <span className="ml-auto px-1.5 py-0.5 rounded-md bg-emerald-600/20 text-emerald-400 text-[0.6rem] font-bold">
+          <span className="ml-auto px-1.5 py-0.5 rounded-md bg-emerald-600/20 border border-emerald-700/40 text-emerald-400 text-[0.6rem] font-bold">
             {fileNames.length} src
           </span>
         )}
@@ -360,6 +353,7 @@ export default function UtilityToolbox({
                     ref={fileInputRef}
                     type="file"
                     multiple
+                    title="Select source files to upload"
                     accept=".txt,.md,.csv,.json,.pdf,.docx,.png,.jpg,.jpeg,.gif,.webp"
                     onChange={(e) => e.target.files && processFiles(e.target.files)}
                     className="hidden"
@@ -582,7 +576,7 @@ export default function UtilityToolbox({
                   Use this →
                 </button>
               </div>
-              <button type="button" onClick={onDismissRecommendation} className="text-slate-600 hover:text-slate-400">
+              <button type="button" title="Dismiss recommendation" onClick={onDismissRecommendation} className="text-slate-600 hover:text-slate-400">
                 <X size={12} />
               </button>
             </div>
@@ -638,6 +632,7 @@ function WorkspaceFileTree({
           <div key={node.path}>
             <button
               type="button"
+              title={`Toggle folder ${node.name}`}
               onClick={() => onToggle(node.path)}
               className="w-full flex items-center gap-1.5 py-1 hover:bg-slate-700/30 transition-colors"
               style={{ paddingLeft: `${10 + depth * 12}px` }}
