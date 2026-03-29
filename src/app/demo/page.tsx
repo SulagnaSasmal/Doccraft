@@ -2,71 +2,113 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
-  Play, Pause, RotateCcw, ChevronRight, FileText,
+  Play, Pause, Square, RotateCcw, ChevronRight, FileText,
   Zap, Shield, Clock, CheckCircle2, ExternalLink,
   Upload, Search, Sparkles, Edit3, Download, Volume2, VolumeX,
 } from "lucide-react";
 
 // ── Demo script ───────────────────────────────────────────────────────────────
+// Each step: WHAT the feature is, then WHY it exists.
 const STEPS = [
   {
     id: "intro",
     title: "DocCraft AI",
     subtitle: "Intelligent Documentation Generator",
-    narration: "DocCraft transforms raw, messy source material into polished, structured technical documentation — with a gap analysis check before a single word is written. Every other AI documentation tool skips that check. DocCraft does not.",
-    duration: 6000,
+    narration:
+      "DocCraft AI is an intelligent documentation generator. " +
+      "It is built around a single question that most AI writing tools never ask: " +
+      "what is missing from your source material before you write a single word? " +
+      "Every other tool generates immediately. DocCraft analyses first. " +
+      "That one difference changes everything about the quality of what comes out.",
+    duration: 9000,
   },
   {
     id: "upload",
     title: "Step 1 — Upload",
     subtitle: "Any format. Any source.",
-    narration: "Documentation work doesn't start with clean Markdown files. It starts with a PDF spec, a Word document with tracked changes, a screenshot of a whiteboard, or a Slack thread someone copy-pasted into notes. DocCraft accepts all of it — PDF, DOCX, PNG, JSON, CSV, and more. Everything is extracted and normalised before analysis begins.",
-    duration: 7000,
+    narration:
+      "The first step is uploading your source material, in whatever format it arrives. " +
+      "DocCraft accepts PDF, Word documents, images, JSON, CSV, Markdown, and plain text. " +
+      "Why does this matter? Because documentation work does not start with clean files. " +
+      "It starts with a spec exported from Confluence, a Word document full of tracked changes, " +
+      "or a photograph of a whiteboard. " +
+      "DocCraft reads whatever you actually have — not whatever you wish you had.",
+    duration: 11000,
   },
   {
     id: "gap",
     title: "Step 2 — Gap Analysis",
-    subtitle: "What's missing before you write?",
-    narration: "This is the step that changes everything. Before generating a single word, DocCraft reads your source material and identifies what is missing — not what is poorly written, but what is absent. Missing information. Ambiguities that could mean two things. Assumptions the audience doesn't share. It then asks specific, content-aware questions tied directly to what it found.",
-    duration: 8000,
+    subtitle: "Find what's missing before you write.",
+    narration:
+      "Step two is gap analysis — and this is the feature that makes DocCraft different. " +
+      "Before generating a single word, DocCraft reads your content and identifies what is absent. " +
+      "Not what is poorly written. What is missing entirely. " +
+      "It surfaces three types of gaps: facts the document requires but does not contain, " +
+      "statements that could mean two different things, and assumptions the audience does not share. " +
+      "Why does this exist? Because the most common failure in AI documentation is confident output from incomplete input.",
+    duration: 12000,
   },
   {
     id: "generate",
     title: "Step 3 — Generate",
     subtitle: "Audience-aware. Structure-first.",
-    narration: "Choose your document type — User Guide, API Reference, Quick Start, Troubleshooting. Set the audience level and tone. The model writes from your gap analysis answers, not just the raw source. The 90 seconds of structured input gathering before generation is what changes the output quality — not the model size, not the prompt engineering.",
-    duration: 7000,
+    narration:
+      "Step three is generation. You choose the document type — API Reference, User Guide, Quick Start, Troubleshooting. " +
+      "You set the audience level and the tone. " +
+      "Then DocCraft writes from your gap analysis answers, not just the raw source. " +
+      "Why does this produce better output? " +
+      "Because ninety seconds of structured input gathering before generation changes what the model writes. " +
+      "Not the model size. Not the prompt engineering. The preparation.",
+    duration: 11000,
   },
   {
     id: "compliance",
     title: "Step 4 — Compliance Check",
     subtitle: "Microsoft Style Guide. Automatic.",
-    narration: "The compliance checker runs the moment the document is generated — not after you have already read it and accepted the problems. Passive voice. Title Case headings that should be Sentence case. Procedure steps missing imperative verbs. Forbidden terms like simply and just. Every issue is categorised by severity with a one-click fix.",
-    duration: 7500,
+    narration:
+      "Step four is the compliance check. " +
+      "The moment DocCraft generates a document, it runs a Microsoft Style Guide audit — automatically, before you read the draft. " +
+      "It flags passive voice, incorrect heading case, procedure steps missing imperative verbs, and forbidden terms like simply and just. " +
+      "Why does it run automatically rather than on request? " +
+      "Because compliance flags are only useful before you have read the draft and accepted the problems. " +
+      "A flag alongside the first draft gets acted on. A flag three minutes later gets dismissed.",
+    duration: 12000,
   },
   {
     id: "edit",
     title: "Step 5 — Edit & Export",
     subtitle: "Diagrams, infographics, cloud save.",
-    narration: "Edit inline in the structured editor. Generate Mermaid diagrams — flowcharts, sequence diagrams, state diagrams — directly from the document content. Create visual infographics. Save to your cloud document library or export as Markdown, HTML, or PDF. Sign in to unlock team workspaces and GitHub publishing.",
-    duration: 7000,
+    narration:
+      "Step five is editing and export. " +
+      "The inline editor lets you refine the document, generate Mermaid diagrams directly from the content, and create visual infographics. " +
+      "Export as Markdown, HTML, or PDF. Sign in to save to your cloud document library or publish directly to GitHub. " +
+      "Why these export options? Because documentation lives in different systems — " +
+      "GitHub repositories, Confluence spaces, help centres — " +
+      "and DocCraft meets it where it needs to go.",
+    duration: 11000,
   },
   {
     id: "outro",
     title: "Try DocCraft",
     subtitle: "Free. No install. Runs in your browser.",
-    narration: "The gap analysis is the differentiator. No other tool I have tested asks what is missing before it writes. That step changes the output quality in a way that better prompting or a larger model does not. DocCraft is free, runs entirely in your browser, and requires no installation. Open it now and try it with your own source material.",
-    duration: 7000,
+    narration:
+      "DocCraft is free, runs in your browser, and requires no installation. " +
+      "The gap analysis is the differentiator. " +
+      "No other documentation tool I have tested asks what is missing before it writes. " +
+      "That question changes what gets generated in a way that no amount of prompt engineering or model scaling can replicate. " +
+      "Open DocCraft now and run it against your own source material. " +
+      "See what it finds before it writes a word.",
+    duration: 11000,
   },
 ];
 
 const FEATURES = [
-  { icon: Upload,   color: "text-blue-400",   label: "10+ file formats",       sub: "PDF, DOCX, PNG, JSON…" },
-  { icon: Search,   color: "text-yellow-400", label: "AI Gap Analysis",        sub: "Finds what's missing first" },
-  { icon: Sparkles, color: "text-violet-400", label: "GPT-4o-mini generation", sub: "Structured, audience-aware" },
-  { icon: Shield,   color: "text-emerald-400",label: "MSTP Compliance",        sub: "Auto-runs on every draft" },
-  { icon: Edit3,    color: "text-orange-400", label: "Live editor",            sub: "Diagrams, inline AI edits" },
-  { icon: Download, color: "text-slate-400",  label: "Export anywhere",        sub: "MD, HTML, PDF, cloud save" },
+  { icon: Upload,   color: "text-blue-400",    label: "10+ file formats",       sub: "PDF, DOCX, PNG, JSON…" },
+  { icon: Search,   color: "text-yellow-400",  label: "AI Gap Analysis",        sub: "Finds what's missing first" },
+  { icon: Sparkles, color: "text-violet-400",  label: "GPT-4o-mini generation", sub: "Structured, audience-aware" },
+  { icon: Shield,   color: "text-emerald-400", label: "MSTP Compliance",        sub: "Auto-runs on every draft" },
+  { icon: Edit3,    color: "text-orange-400",  label: "Live editor",            sub: "Diagrams, inline AI edits" },
+  { icon: Download, color: "text-slate-400",   label: "Export anywhere",        sub: "MD, HTML, PDF, cloud save" },
 ];
 
 const SAMPLE_CONTENT = `# VaultPay Payments API — Internal Spec v2.1
@@ -95,22 +137,59 @@ const COMPLIANCE_FLAGS = [
   { severity: "info",    text: "Consider adding a code example for the response object",  fix: "Suggest" },
 ];
 
+// ── Voice selection ───────────────────────────────────────────────────────────
+// Prefers natural-sounding English voices in priority order
+const PREFERRED_VOICES = [
+  "Google UK English Female",
+  "Microsoft Sonia Online (Natural)",
+  "Microsoft Libby Online (Natural)",
+  "Samantha",
+  "Karen",
+  "Moira",
+  "Tessa",
+  "Google US English",
+  "Microsoft Zira",
+];
+
+function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
+  for (const name of PREFERRED_VOICES) {
+    const match = voices.find((v) => v.name === name || v.name.includes(name));
+    if (match) return match;
+  }
+  // fallback: any English voice
+  return voices.find((v) => v.lang.startsWith("en")) ?? null;
+}
+
+// ── Component ─────────────────────────────────────────────────────────────────
 export default function DemoPage() {
-  const [step, setStep]           = useState(0);
-  const [playing, setPlaying]     = useState(false);
-  const [progress, setProgress]   = useState(0);
-  const [narrate, setNarrate]     = useState(true);
-  const [captionWord, setCaptionWord] = useState(0);  // how many words of narration are visible
-  const [typedContent, setTyped]  = useState("");
-  const [complianceDone, setCD]   = useState(false);
+  const [step, setStep]               = useState(0);
+  const [playing, setPlaying]         = useState(false);
+  const [progress, setProgress]       = useState(0);
+  const [narrate, setNarrate]         = useState(true);
+  const [captionWord, setCaptionWord] = useState(0);
+  const [typedContent, setTyped]      = useState("");
+  const [complianceDone, setCD]       = useState(false);
+  const [voicesReady, setVoicesReady] = useState(false);
 
-  const timerRef      = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const progressRef   = useRef<ReturnType<typeof setInterval> | null>(null);
-  const captionRef    = useRef<ReturnType<typeof setInterval> | null>(null);
-  const utteranceRef  = useRef<SpeechSynthesisUtterance | null>(null);
+  const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const captionRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
 
-  const current = STEPS[step];
-  const narrationWords = current.narration.split(" ");
+  const current         = STEPS[step];
+  const narrationWords  = current.narration.split(" ");
+
+  // Load voices asynchronously (Chrome/Edge fires voiceschanged)
+  useEffect(() => {
+    if (typeof window === "undefined" || !window.speechSynthesis) return;
+    const load = () => setVoicesReady(true);
+    if (window.speechSynthesis.getVoices().length > 0) {
+      setVoicesReady(true);
+    } else {
+      window.speechSynthesis.addEventListener("voiceschanged", load, { once: true });
+    }
+    return () => window.speechSynthesis.removeEventListener("voiceschanged", load);
+  }, []);
 
   // ── speech synthesis ──────────────────────────────────────────────────────
   const stopSpeech = useCallback(() => {
@@ -124,37 +203,42 @@ export default function DemoPage() {
     if (!narrate || typeof window === "undefined" || !window.speechSynthesis) return;
     stopSpeech();
     const u = new SpeechSynthesisUtterance(text);
-    u.rate  = 0.92;
-    u.pitch = 1.0;
+    u.rate  = 0.88;
+    u.pitch = 1.05;
     u.lang  = "en-GB";
+    if (voicesReady) {
+      const v = pickVoice(window.speechSynthesis.getVoices());
+      if (v) u.voice = v;
+    }
     utteranceRef.current = u;
     window.speechSynthesis.speak(u);
-  }, [narrate, stopSpeech]);
+  }, [narrate, stopSpeech, voicesReady]);
 
   // ── caption word ticker ───────────────────────────────────────────────────
-  const clearCaption = () => {
+  const clearCaption = useCallback(() => {
     if (captionRef.current) clearInterval(captionRef.current);
-  };
+    captionRef.current = null;
+  }, []);
 
   const startCaption = useCallback((dur: number, words: string[]) => {
     clearCaption();
     setCaptionWord(0);
     if (words.length === 0) return;
-    const msPerWord = Math.max(60, (dur / words.length));
+    const msPerWord = Math.max(55, dur / words.length);
     let i = 0;
     captionRef.current = setInterval(() => {
       i++;
       setCaptionWord(i);
       if (i >= words.length) clearCaption();
     }, msPerWord);
-  }, []);
+  }, [clearCaption]);
 
   // ── timer helpers ─────────────────────────────────────────────────────────
   const clearTimers = useCallback(() => {
     if (timerRef.current)    clearTimeout(timerRef.current);
     if (progressRef.current) clearInterval(progressRef.current);
     clearCaption();
-  }, []);
+  }, [clearCaption]);
 
   const advanceTo = useCallback((nextStep: number) => {
     stopSpeech();
@@ -162,7 +246,11 @@ export default function DemoPage() {
     setProgress(0);
     setCaptionWord(0);
     setCD(false);
-    if (nextStep >= STEPS.length) { setPlaying(false); setStep(0); return; }
+    if (nextStep >= STEPS.length) {
+      setPlaying(false);
+      setStep(0);
+      return;
+    }
     setStep(nextStep);
   }, [stopSpeech, clearTimers]);
 
@@ -181,7 +269,7 @@ export default function DemoPage() {
   // ── compliance scan animation ─────────────────────────────────────────────
   useEffect(() => {
     if (STEPS[step].id !== "compliance") return;
-    const t = setTimeout(() => setCD(true), 800);
+    const t = setTimeout(() => setCD(true), 900);
     return () => clearTimeout(t);
   }, [step]);
 
@@ -192,16 +280,12 @@ export default function DemoPage() {
       stopSpeech();
       return;
     }
-    const dur = current.duration;
+    const dur   = current.duration;
     const words = current.narration.split(" ");
 
-    // speak
     speak(current.narration);
-
-    // caption word ticker
     startCaption(dur, words);
 
-    // progress bar
     let elapsed = 0;
     const tick  = 50;
     progressRef.current = setInterval(() => {
@@ -209,7 +293,6 @@ export default function DemoPage() {
       setProgress(Math.min(100, (elapsed / dur) * 100));
     }, tick);
 
-    // advance
     timerRef.current = setTimeout(() => advanceTo(step + 1), dur);
 
     return () => { clearTimers(); stopSpeech(); };
@@ -221,18 +304,20 @@ export default function DemoPage() {
     if (!narrate) stopSpeech();
   }, [narrate, stopSpeech]);
 
-  const handlePlay    = () => setPlaying((v) => !v);
-  const handleRestart = () => { setPlaying(false); stopSpeech(); setStep(0); setProgress(0); setCaptionWord(0); };
+  // ── handlers ─────────────────────────────────────────────────────────────
+  const handlePause   = () => setPlaying(false);
+  const handlePlay    = () => setPlaying(true);
+  const handleStop    = () => { setPlaying(false); stopSpeech(); setStep(0); setProgress(0); setCaptionWord(0); setCD(false); };
+  const handleRestart = () => handleStop();
 
-  // visible caption text (words revealed so far)
   const captionText = narrationWords.slice(0, captionWord).join(" ");
 
   return (
     <div className="min-h-screen bg-slate-950 text-slate-50 flex flex-col">
 
-      {/* ── Header ───────────────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-900/95 backdrop-blur-md px-5 py-3 flex items-center gap-4">
-        <div className="flex items-center gap-2.5">
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 border-b border-slate-800/80 bg-slate-900/95 backdrop-blur-md px-5 py-3 flex items-center gap-3 flex-wrap">
+        <div className="flex items-center gap-2.5 shrink-0">
           <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center shadow-lg shadow-blue-900/40">
             <FileText size={15} className="text-white" />
           </div>
@@ -242,7 +327,7 @@ export default function DemoPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 ml-auto">
+        <div className="flex items-center gap-2 ml-auto flex-wrap">
           {/* Narrate toggle */}
           <button
             type="button"
@@ -251,28 +336,50 @@ export default function DemoPage() {
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors
               ${narrate
                 ? "bg-blue-600/20 text-blue-300 border border-blue-500/30 hover:bg-blue-600/30"
-                : "text-slate-500 hover:text-slate-300 hover:bg-slate-800"}`}
+                : "text-slate-500 hover:text-slate-300 hover:bg-slate-800 border border-slate-700/40"}`}
           >
             {narrate ? <Volume2 size={13} /> : <VolumeX size={13} />}
-            {narrate ? "Narration on" : "Narration off"}
+            {narrate ? "Audio on" : "Audio off"}
           </button>
 
+          {/* Stop — resets to beginning */}
+          <button
+            type="button"
+            onClick={handleStop}
+            title="Stop and reset to beginning"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-700/40 transition-colors"
+          >
+            <Square size={11} className="fill-current" /> Stop
+          </button>
+
+          {/* Restart */}
           <button
             type="button"
             onClick={handleRestart}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+            title="Restart from the beginning"
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs text-slate-400 hover:text-slate-200 hover:bg-slate-800 border border-slate-700/40 transition-colors"
           >
             <RotateCcw size={12} /> Restart
           </button>
 
-          <button
-            type="button"
-            onClick={handlePlay}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors shadow-sm shadow-blue-900/40"
-          >
-            {playing ? <Pause size={13} /> : <Play size={13} />}
-            {playing ? "Pause" : step === 0 ? "Play Demo" : "Resume"}
-          </button>
+          {/* Play / Pause */}
+          {playing ? (
+            <button
+              type="button"
+              onClick={handlePause}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-amber-600 hover:bg-amber-500 text-white transition-colors shadow-sm"
+            >
+              <Pause size={13} /> Pause
+            </button>
+          ) : (
+            <button
+              type="button"
+              onClick={handlePlay}
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold bg-blue-600 hover:bg-blue-500 text-white transition-colors shadow-sm shadow-blue-900/40"
+            >
+              <Play size={13} /> {step === 0 ? "Play Demo" : "Resume"}
+            </button>
+          )}
 
           <a
             href="/"
@@ -283,12 +390,12 @@ export default function DemoPage() {
         </div>
       </header>
 
-      {/* ── Progress bar ─────────────────────────────────────────────────────── */}
+      {/* ── Progress bar ───────────────────────────────────────────────────── */}
       <div className="w-full h-0.5 bg-slate-800">
         <div className="h-full bg-blue-500 transition-all duration-100" style={{ width: `${progress}%` }} />
       </div>
 
-      {/* ── Step nav pills ───────────────────────────────────────────────────── */}
+      {/* ── Step nav pills ─────────────────────────────────────────────────── */}
       <div className="flex items-center justify-center gap-1.5 py-3 border-b border-slate-800/60 px-4 flex-wrap">
         {STEPS.map((s, i) => (
           <button
@@ -309,11 +416,11 @@ export default function DemoPage() {
         ))}
       </div>
 
-      {/* ── Main area ────────────────────────────────────────────────────────── */}
+      {/* ── Main area ──────────────────────────────────────────────────────── */}
       <main className="flex-1 flex flex-col lg:flex-row gap-0 overflow-hidden">
 
         {/* Left: script panel */}
-        <div className="lg:w-[340px] shrink-0 border-r border-slate-800/60 flex flex-col justify-center px-8 py-10 space-y-5">
+        <div className="lg:w-[360px] shrink-0 border-r border-slate-800/60 flex flex-col justify-center px-8 py-10 space-y-5">
           <div>
             <p className="text-[0.65rem] font-bold uppercase tracking-widest text-blue-400 mb-2">
               {step + 1} / {STEPS.length}
@@ -322,10 +429,20 @@ export default function DemoPage() {
             <p className="text-base font-medium text-blue-300 mt-1">{current.subtitle}</p>
           </div>
 
-          {/* Full narration script — shown in left panel always */}
-          <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-4 py-3">
-            <p className="text-[0.6rem] font-bold uppercase tracking-widest text-slate-500 mb-2">Script</p>
-            <p className="text-[0.72rem] text-slate-300 leading-relaxed">{current.narration}</p>
+          {/* Narration script — always visible in left panel */}
+          <div className="bg-slate-800/40 border border-slate-700/40 rounded-xl px-4 py-4 space-y-3">
+            <div>
+              <p className="text-[0.6rem] font-bold uppercase tracking-widest text-slate-500 mb-1">What it is</p>
+              <p className="text-[0.72rem] text-slate-300 leading-relaxed">
+                {current.narration.split(". ").slice(0, 2).join(". ") + "."}
+              </p>
+            </div>
+            <div className="border-t border-slate-700/40 pt-3">
+              <p className="text-[0.6rem] font-bold uppercase tracking-widest text-slate-500 mb-1">Why it matters</p>
+              <p className="text-[0.72rem] text-slate-400 leading-relaxed">
+                {current.narration.split(". ").slice(2).join(". ")}
+              </p>
+            </div>
           </div>
 
           <div className="flex items-center gap-3 pt-1">
@@ -413,10 +530,10 @@ export default function DemoPage() {
                   <p className="text-sm font-semibold text-slate-200">Gap Analysis — 4 issues found</p>
                 </div>
                 {[
-                  { cat: "Missing",   q: "What authentication method does /v2/payments/initiate use? Bearer token, API key, or OAuth 2.0?", priority: "critical" },
-                  { cat: "Missing",   q: "What HTTP status codes does the endpoint return on failure — 400, 401, 422, 500?",                 priority: "critical" },
-                  { cat: "Ambiguous", q: "The spec says '3DS2 may be triggered' — what is the threshold amount and which currencies apply?", priority: "optional" },
-                  { cat: "Assumption",q: "The audience is assumed to know minor currency units (pence/cents). Should this be explained?",    priority: "optional" },
+                  { cat: "Missing",    q: "What authentication method does /v2/payments/initiate use? Bearer token, API key, or OAuth 2.0?",   priority: "critical" },
+                  { cat: "Missing",    q: "What HTTP status codes does the endpoint return on failure — 400, 401, 422, 500?",                    priority: "critical" },
+                  { cat: "Ambiguous",  q: "The spec says '3DS2 may be triggered' — what is the threshold amount and which currencies apply?",    priority: "optional" },
+                  { cat: "Assumption", q: "The audience is assumed to know minor currency units (pence/cents). Should this be explained?",       priority: "optional" },
                 ].map((item, i) => (
                   <div key={i} className={`px-4 py-3 rounded-xl border text-[0.72rem] leading-relaxed
                     ${item.priority === "critical"
@@ -439,9 +556,9 @@ export default function DemoPage() {
             {current.id === "generate" && (
               <div className="w-full max-w-sm space-y-4">
                 {[
-                  { label: "Document Type", value: "API Reference",                     accent: "text-blue-400"   },
-                  { label: "Audience",      value: "Technical — Developers & engineers", accent: "text-violet-400" },
-                  { label: "Tone",          value: "Formal — Professional & enterprise", accent: "text-slate-300"  },
+                  { label: "Document Type", value: "API Reference",                      accent: "text-blue-400"   },
+                  { label: "Audience",      value: "Technical — Developers & engineers",  accent: "text-violet-400" },
+                  { label: "Tone",          value: "Formal — Professional & enterprise",  accent: "text-slate-300"  },
                 ].map((item) => (
                   <div key={item.label} className="px-4 py-3 rounded-xl bg-slate-800/60 border border-slate-700/40">
                     <p className="text-[0.62rem] text-slate-500 mb-0.5">{item.label}</p>
@@ -542,13 +659,13 @@ export default function DemoPage() {
             )}
           </div>
 
-          {/* ── Caption bar ── always visible at bottom of visual area ─────── */}
-          <div className="border-t border-slate-800/60 bg-slate-900/80 px-6 py-3 min-h-[56px] flex items-center">
-            <p className="text-[0.78rem] text-slate-300 leading-relaxed max-w-3xl mx-auto text-center">
+          {/* ── Caption bar ── always visible at bottom of visual ──────────── */}
+          <div className="border-t border-slate-800/60 bg-slate-900/90 px-6 py-4 min-h-[64px] flex items-center">
+            <p className="text-[0.8rem] text-slate-200 leading-relaxed max-w-3xl mx-auto text-center">
               {playing && captionText
                 ? captionText
                 : <span className="text-slate-600 italic">
-                    {playing ? "…" : "Press Play to begin narrated demo"}
+                    {playing ? "…" : step === 0 ? "Press Play to begin the narrated walkthrough" : "Press Resume to continue"}
                   </span>
               }
             </p>
@@ -557,7 +674,7 @@ export default function DemoPage() {
         </div>
       </main>
 
-      {/* ── Footer ───────────────────────────────────────────────────────────── */}
+      {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="border-t border-slate-800/60 px-6 py-3 flex items-center justify-between text-[0.62rem] text-slate-600">
         <span>© 2026 Sulagna Sasmal · DocCraft AI</span>
         <div className="flex items-center gap-4">
