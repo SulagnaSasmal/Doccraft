@@ -1,9 +1,10 @@
 "use client";
 
-import { FileText, RotateCcw, Trash2, X, Plus, Shield, AlertTriangle } from "lucide-react";
+import { FileText, RotateCcw, Trash2, X, Plus, Shield, AlertTriangle, Search } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { useState } from "react";
 import type { DocSession } from "@/lib/useDocHistory";
 
 const DOC_TYPE_LABELS: Record<string, string> = {
@@ -50,6 +51,19 @@ interface Props {
 }
 
 export default function DocumentLibrary({ history, onRestore, onRemove, onClearAll, onNewDoc }: Props) {
+  const [query, setQuery] = useState("");
+
+  const filtered = query.trim()
+    ? history.filter((s) => {
+        const q = query.toLowerCase();
+        return (
+          (DOC_TYPE_LABELS[s.config.docType] ?? s.config.docType).toLowerCase().includes(q) ||
+          (s.label ?? "").toLowerCase().includes(q) ||
+          s.inputSummary.toLowerCase().includes(q)
+        );
+      })
+    : history;
+
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
@@ -65,6 +79,7 @@ export default function DocumentLibrary({ history, onRestore, onRemove, onClearA
         <div className="flex items-center gap-2">
           {history.length > 0 && (
             <button
+              type="button"
               onClick={onClearAll}
               className="flex items-center gap-1.5 text-[0.72rem] text-slate-500 hover:text-red-400 transition-colors"
             >
@@ -73,6 +88,7 @@ export default function DocumentLibrary({ history, onRestore, onRemove, onClearA
             </button>
           )}
           <button
+            type="button"
             onClick={onNewDoc}
             className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-600 text-white
                        text-[0.78rem] font-medium rounded-lg hover:bg-blue-700 transition-colors"
@@ -82,6 +98,27 @@ export default function DocumentLibrary({ history, onRestore, onRemove, onClearA
           </button>
         </div>
       </div>
+
+      {/* Search */}
+      {history.length > 0 && (
+        <div className="px-6 pb-3">
+          <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg bg-slate-800/60 border border-slate-700/40">
+            <Search size={12} className="text-slate-500 shrink-0" />
+            <input
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="Filter by type, label, or content…"
+              className="flex-1 bg-transparent text-[0.72rem] text-slate-300 placeholder:text-slate-600 outline-none"
+            />
+            {query && (
+              <button type="button" onClick={() => setQuery("")} className="text-slate-600 hover:text-slate-400 transition-colors">
+                <X size={11} />
+              </button>
+            )}
+          </div>
+        </div>
+      )}
 
       <ScrollArea className="flex-1">
         <div className="px-6 py-5">
@@ -97,9 +134,14 @@ export default function DocumentLibrary({ history, onRestore, onRemove, onClearA
                 Upload source material in the Utility Toolbox and analyze it to generate your first document.
               </p>
             </div>
+          ) : filtered.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <Search size={24} className="text-slate-700 mb-3" />
+              <p className="text-slate-500 text-sm">No results for &ldquo;{query}&rdquo;</p>
+            </div>
           ) : (
             <div className="grid grid-cols-1 xl:grid-cols-2 2xl:grid-cols-3 gap-3">
-              {history.map((session) => {
+              {filtered.map((session) => {
                 const compliance = getComplianceStatus(session);
                 const typeColor = DOC_TYPE_COLORS[session.config.docType] ?? "bg-slate-700/40 text-slate-300 border-slate-600/40";
 
@@ -114,6 +156,7 @@ export default function DocumentLibrary({ history, onRestore, onRemove, onClearA
                   >
                     {/* Remove button */}
                     <button
+                      type="button"
                       onClick={(e) => { e.stopPropagation(); onRemove(session.id); }}
                       className="absolute top-3 right-3 p-1 rounded-md opacity-0 group-hover:opacity-100
                                  hover:bg-slate-700 text-slate-500 hover:text-slate-300 transition-all"

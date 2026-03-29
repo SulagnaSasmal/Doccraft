@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
 import { buildGenerateMessages } from "@/lib/docGeneration";
+import { checkRateLimit } from "@/lib/rateLimit";
 
 export const runtime = 'edge'; // 25s on Hobby, 30s on Pro (vs 10s for Node.js serverless on Hobby)
 export const maxDuration = 30;
@@ -66,6 +67,21 @@ const TONE_INSTRUCTIONS: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
+    const ip =
+      req.headers.get("x-forwarded-for")?.split(",")[0].trim() ??
+      req.headers.get("x-real-ip") ??
+      "unknown";
+    const rl = checkRateLimit(ip);
+    if (!rl.ok) {
+      return NextResponse.json(
+        { error: "Too many requests. Please wait a moment and try again." },
+        {
+          status: 429,
+          headers: { "Retry-After": String(rl.retryAfter ?? 60) },
+        }
+      );
+    }
+
     const body = await req.json();
     const { action, content, config, answers, contextText, stream } = body;
 

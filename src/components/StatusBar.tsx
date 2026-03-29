@@ -29,6 +29,8 @@ export default function StatusBar({
               {fileCount} source{fileCount > 1 ? "s" : ""}
             </span>
           )}
+          <span>© {new Date().getFullYear()} Sulagna Sasmal</span>
+          <span className="text-ink-5">·</span>
           <span>Powered by OpenAI</span>
         </div>
       </div>

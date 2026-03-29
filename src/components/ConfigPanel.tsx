@@ -11,6 +11,14 @@ const DOC_TYPES = [
   { value: "release-notes", label: "Release Notes", desc: "What's new and changed" },
 ];
 
+const STRUCTURE_PREVIEW: Record<string, string[]> = {
+  "user-guide":       ["Overview", "Prerequisites", "Getting Started", "Core Features", "Troubleshooting"],
+  "quick-start":      ["What You'll Build", "Before You Begin", "Steps (numbered)", "Verify It Works"],
+  "api-reference":    ["Auth", "Base URL & Endpoints", "Request / Response", "Error Codes"],
+  "troubleshooting":  ["Common Issues", "Error Reference", "Diagnostic Steps", "Escalation"],
+  "release-notes":    ["Highlights", "New Features", "Bug Fixes", "Migration Notes"],
+};
+
 const AUDIENCES = [
   { value: "non-technical", label: "Non-Technical", desc: "End users, no jargon" },
   { value: "technical", label: "Technical", desc: "Developers & engineers" },
@@ -53,21 +61,32 @@ export default function ConfigPanel({
                 key={t.value}
                 type="button"
                 onClick={() => update("docType", t.value)}
-                className={`w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
+                className={`w-full flex flex-col gap-1.5 px-3 py-2 rounded-lg text-xs font-medium transition-all text-left ${
                   config.docType === t.value
                     ? "bg-brand-700 text-white shadow-sm"
                     : "bg-surface-0 text-ink-2 hover:bg-surface-2 border border-surface-3"
                 }`}
               >
-                <span className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 transition-colors ${
-                  config.docType === t.value ? "bg-white border-white" : "border-ink-3"
-                }`} />
-                <div className="flex flex-col min-w-0">
-                  <span>{t.label}</span>
-                  <span className={`text-[0.62rem] font-normal leading-tight mt-0.5 ${
-                    config.docType === t.value ? "text-white/70" : "text-ink-4"
-                  }`}>{t.desc}</span>
+                <div className="flex items-center gap-2.5">
+                  <span className={`w-2.5 h-2.5 rounded-full border-2 shrink-0 transition-colors ${
+                    config.docType === t.value ? "bg-white border-white" : "border-ink-3"
+                  }`} />
+                  <div className="flex flex-col min-w-0">
+                    <span>{t.label}</span>
+                    <span className={`text-[0.62rem] font-normal leading-tight mt-0.5 ${
+                      config.docType === t.value ? "text-white/70" : "text-ink-4"
+                    }`}>{t.desc}</span>
+                  </div>
                 </div>
+                {config.docType === t.value && STRUCTURE_PREVIEW[t.value] && (
+                  <div className="pl-5 flex flex-wrap gap-1 mt-0.5">
+                    {STRUCTURE_PREVIEW[t.value].map((section, i) => (
+                      <span key={i} className="text-[0.58rem] px-1.5 py-0.5 rounded bg-white/10 text-white/75 font-mono">
+                        {section}
+                      </span>
+                    ))}
+                  </div>
+                )}
               </button>
             ))}
           </div>

@@ -50,7 +50,7 @@ export default function OnboardingTour() {
   const Icon = current.icon;
 
   return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center bg-black/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-[200] flex items-start justify-center pt-20 bg-black/60 backdrop-blur-sm">
       <div className="relative w-full max-w-sm mx-4 rounded-2xl border border-slate-700/60 bg-slate-900 shadow-2xl shadow-black/60 overflow-hidden">
 
         {/* Top bar: progress dots + close */}

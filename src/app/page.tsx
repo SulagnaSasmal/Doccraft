@@ -840,7 +840,7 @@ export default function Home() {
           {stage === "editing" && (
             <div className="flex-1 overflow-auto p-4">
               {justGenerated && (
-                <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-600/8 p-4 animate-fade-in-up flex items-start gap-3">
+                <div className="mb-4 rounded-2xl border border-emerald-500/30 bg-emerald-600/[0.08] p-4 animate-fade-in-up flex items-start gap-3">
                   <div className="w-8 h-8 rounded-xl bg-emerald-600/20 flex items-center justify-center shrink-0">
                     <Download size={14} className="text-emerald-400" />
                   </div>
@@ -853,8 +853,14 @@ export default function Home() {
                       {" · "}~{generatedDoc.trim().split(/\s+/).filter(Boolean).length.toLocaleString()} words
                       {" · "}~{Math.ceil(generatedDoc.trim().split(/\s+/).filter(Boolean).length / 250)} pages estimated
                     </p>
-                    <div className="flex items-center gap-3 mt-2">
-                      <span className="text-[0.65rem] text-slate-500">Use the toolbar below to refine, export, or save to cloud.</span>
+                    <div className="flex items-center gap-2 mt-2 flex-wrap">
+                      <span className="text-[0.65rem] text-slate-500">Export from the toolbar below:</span>
+                      {[".md", "HTML", "DOCX", "PDF"].map((fmt) => (
+                        <span key={fmt} className="px-2 py-0.5 rounded-md bg-slate-800/80 border border-slate-700/60 text-[0.6rem] font-mono text-slate-400">
+                          {fmt}
+                        </span>
+                      ))}
+                      <span className="text-[0.65rem] text-slate-600">· or publish to GitHub ↓</span>
                     </div>
                   </div>
                   <button

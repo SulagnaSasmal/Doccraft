@@ -76,6 +76,8 @@ function Section({
   onToggle,
   children,
   badge,
+  step,
+  stepDone,
 }: {
   id: string;
   label: string;
@@ -85,17 +87,31 @@ function Section({
   onToggle: (id: string) => void;
   children: React.ReactNode;
   badge?: string;
+  step?: number;
+  stepDone?: boolean;
 }) {
   return (
-    <div className="border border-slate-800/60 rounded-xl overflow-hidden bg-slate-900/40">
+    <div className={`border rounded-xl overflow-hidden bg-slate-900/40 transition-colors ${
+      stepDone ? "border-emerald-700/40" : "border-slate-800/60"
+    }`}>
       <button
         type="button"
         onClick={() => onToggle(id)}
         className="w-full flex items-center gap-3 px-3.5 py-3 bg-slate-800/40 hover:bg-slate-800/70 transition-colors text-left"
       >
-        <div className="w-5 h-5 rounded-md bg-slate-700/60 flex items-center justify-center shrink-0">
-          <Icon size={11} className={`${accent} shrink-0`} />
-        </div>
+        {step != null ? (
+          <div className={`w-5 h-5 rounded-full flex items-center justify-center shrink-0 text-[0.6rem] font-bold border ${
+            stepDone
+              ? "bg-emerald-600/30 border-emerald-600/50 text-emerald-400"
+              : "bg-slate-700/60 border-slate-600/50 text-slate-400"
+          }`}>
+            {stepDone ? "✓" : step}
+          </div>
+        ) : (
+          <div className="w-5 h-5 rounded-md bg-slate-700/60 flex items-center justify-center shrink-0">
+            <Icon size={11} className={`${accent} shrink-0`} />
+          </div>
+        )}
         <span className="flex-1 text-[0.78rem] font-semibold text-slate-200 tracking-tight">
           {label}
         </span>
@@ -313,6 +329,8 @@ export default function UtilityToolbox({
             expanded={expanded.has("source")}
             onToggle={toggleSection}
             badge={fileNames.length > 0 ? `${fileNames.length}` : undefined}
+            step={1}
+            stepDone={fileNames.length > 0}
           >
             <div className="space-y-2">
               {/* Upload / Paste / Local tabs */}
@@ -482,6 +500,8 @@ export default function UtilityToolbox({
             accent="text-slate-500"
             expanded={expanded.has("config")}
             onToggle={toggleSection}
+            step={2}
+            stepDone={fileNames.length > 0}
           >
             <div className="[&_.bg-surface-0]:bg-slate-800/40 [&_.bg-surface-0]:border-slate-700/50
                             [&_.bg-surface-1]:bg-slate-800/30 [&_.text-ink-0]:text-slate-200
@@ -500,6 +520,8 @@ export default function UtilityToolbox({
             accent="text-slate-500"
             expanded={expanded.has("context")}
             onToggle={toggleSection}
+            step={3}
+            stepDone={contextText.length > 0}
           >
             <div className="[&_.bg-surface-0]:bg-slate-800/40 [&_.bg-surface-0]:border-slate-700/50
                             [&_.bg-surface-1]:bg-slate-800/30 [&_.text-ink-0]:text-slate-200

@@ -113,9 +113,12 @@ export default function DocumentEditor({
   const [inlineToolbar, setInlineToolbar] = useState<{ top: number; left: number } | null>(null);
   const [showMore, setShowMore] = useState(false);
   const [editingTitle, setEditingTitle] = useState(false);
+  const [copiedNotion, setCopiedNotion] = useState(false);
+  const [copiedConfluence, setCopiedConfluence] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const moreRef = useRef<HTMLDivElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const floatingToolbarRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -360,6 +363,30 @@ ${bodyHTML}
     setTimeout(() => setCopiedPlain(false), 2000);
   };
 
+  const copyForNotion = async () => {
+    // Notion paste-from-clipboard understands Markdown directly
+    await navigator.clipboard.writeText(content);
+    setCopiedNotion(true);
+    setTimeout(() => setCopiedNotion(false), 2500);
+  };
+
+  const copyForConfluence = async () => {
+    // Confluence "Insert Markup" accepts HTML; strip full-page wrapper, keep body content only
+    let body = markdownToBasicHTML(content);
+    // Wrap in a minimal div Confluence can paste from clipboard
+    const html = `<div>${body}</div>`;
+    try {
+      await navigator.clipboard.write([
+        new ClipboardItem({ "text/html": new Blob([html], { type: "text/html" }), "text/plain": new Blob([content], { type: "text/plain" }) }),
+      ]);
+    } catch {
+      // Fallback: copy as plain markdown if ClipboardItem not supported
+      await navigator.clipboard.writeText(content);
+    }
+    setCopiedConfluence(true);
+    setTimeout(() => setCopiedConfluence(false), 2500);
+  };
+
   const exportPDF = () => {
     const htmlContent = buildHTMLExport();
     const printWindow = window.open("", "_blank");
@@ -536,6 +563,7 @@ ${bodyHTML}
             {(["edit", "split", "preview"] as const).map((v) => (
               <button
                 key={v}
+                type="button"
                 onClick={() => setView(v)}
                 className={`px-3 py-1 text-xs font-medium rounded-md transition-all capitalize ${
                   view === v
@@ -556,6 +584,7 @@ ${bodyHTML}
               return (
                 <button
                   key={action.key}
+                  type="button"
                   onClick={() => handleAIAction(action.key)}
                   disabled={refining}
                   title={`${action.desc}${getSelectedText() ? " (selected text)" : " (full doc)"}`}
@@ -661,6 +690,28 @@ ${bodyHTML}
                   <GitGraph size={13} />
                   Diagram
                 </button>
+                {/* Divider */}
+                <div className="h-px bg-surface-2 mx-2 my-0.5" />
+                {/* Notion copy */}
+                <button
+                  type="button"
+                  onClick={() => { copyForNotion(); setShowMore(false); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-ink-2 hover:bg-surface-1 transition-colors"
+                  title="Paste into Notion — Notion reads Markdown directly"
+                >
+                  <Copy size={13} />
+                  {copiedNotion ? "Copied for Notion ✓" : "Copy for Notion"}
+                </button>
+                {/* Confluence copy */}
+                <button
+                  type="button"
+                  onClick={() => { copyForConfluence(); setShowMore(false); }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-ink-2 hover:bg-surface-1 transition-colors"
+                  title="Copies rich HTML — paste into Confluence page editor"
+                >
+                  <FileDown size={13} />
+                  {copiedConfluence ? "Copied for Confluence ✓" : "Copy for Confluence"}
+                </button>
               </div>
             )}
           </div>
@@ -714,6 +765,7 @@ ${bodyHTML}
 
           {/* Phase 3: Infographic + Publish + Cloud Save */}
           <button
+            type="button"
             onClick={() => { setShowInfographic(s => !s); setShowPublish(false); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border ${
               showInfographic ? "bg-brand-50 text-brand-700 border-brand-200" : "text-ink-2 hover:bg-surface-2 border-surface-3"
@@ -724,6 +776,7 @@ ${bodyHTML}
             Infographic
           </button>
           <button
+            type="button"
             onClick={() => { setShowPublish(s => !s); setShowInfographic(false); }}
             className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border ${
               showPublish ? "bg-brand-50 text-brand-700 border-brand-200" : "text-ink-2 hover:bg-surface-2 border-surface-3"
@@ -735,6 +788,7 @@ ${bodyHTML}
           </button>
           {onSaveToCloud && (
             <button
+              type="button"
               onClick={onSaveToCloud}
               disabled={cloudSaving}
               className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border border-surface-3 text-ink-2 hover:bg-surface-2 disabled:opacity-40"
@@ -754,6 +808,7 @@ ${bodyHTML}
           {/* Export buttons */}
           <div className="flex items-center gap-1.5">
             <button
+              type="button"
               onClick={copyToClipboard}
               className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
                          hover:bg-surface-2 rounded-lg transition-colors"
@@ -763,6 +818,7 @@ ${bodyHTML}
               {copied ? "Copied" : "Copy .md"}
             </button>
             <button
+              type="button"
               onClick={copyAsPlainText}
               className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
                          hover:bg-surface-2 rounded-lg transition-colors"
@@ -772,6 +828,7 @@ ${bodyHTML}
               {copiedPlain ? "Copied" : "Plain text"}
             </button>
             <button
+              type="button"
               onClick={exportMarkdown}
               className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
                          hover:bg-surface-2 rounded-lg transition-colors"
@@ -780,6 +837,7 @@ ${bodyHTML}
               .md
             </button>
             <button
+              type="button"
               onClick={exportPDF}
               className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
                          hover:bg-surface-2 rounded-lg transition-colors border border-surface-3"
@@ -788,6 +846,7 @@ ${bodyHTML}
               PDF
             </button>
             <button
+              type="button"
               onClick={exportDOCX}
               disabled={docxExporting}
               className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-ink-2
@@ -803,6 +862,7 @@ ${bodyHTML}
               .docx
             </button>
             <button
+              type="button"
               onClick={exportHTML}
               className="flex items-center gap-1 px-3 py-1.5 bg-brand-700 text-white text-xs
                          font-semibold rounded-lg hover:bg-brand-800 transition-colors shadow-sm"
@@ -817,10 +877,9 @@ ${bodyHTML}
       {/* Editor + Preview */}
       <div className="bg-surface-0 rounded-b-2xl border border-surface-3 overflow-hidden shadow-card">
         <div
-          className={`grid ${
+          className={`grid min-h-[65vh] ${
             view === "split" ? "grid-cols-2" : "grid-cols-1"
           } divide-x divide-surface-2`}
-          style={{ minHeight: "65vh" }}
         >
           {/* Editor */}
           {view !== "preview" && (
@@ -842,17 +901,21 @@ ${bodyHTML}
                 spellCheck={false}
               />
 
-              {/* Floating inline AI toolbar */}
+              {/* Floating inline AI toolbar — top/left set imperatively via ref to avoid inline style lint warning */}
               {inlineToolbar && (
                 <div
+                  ref={(el) => {
+                    (floatingToolbarRef as React.MutableRefObject<HTMLDivElement | null>).current = el;
+                    if (el) { el.style.top = `${inlineToolbar.top}px`; el.style.left = `${inlineToolbar.left}px`; }
+                  }}
                   className="fixed z-50 flex items-center gap-1 bg-surface-0 border border-surface-3 shadow-lg rounded-lg px-1.5 py-1 animate-fade-in-up"
-                  style={{ top: inlineToolbar.top, left: inlineToolbar.left }}
                 >
                   {INLINE_ACTIONS.map((a) => {
                     const Icon = a.icon;
                     return (
                       <button
                         key={a.key}
+                        type="button"
                         onMouseDown={(e) => { e.preventDefault(); handleAIAction(a.key); setInlineToolbar(null); }}
                         className="flex items-center gap-1 px-2 py-1 text-[0.65rem] font-medium text-ink-2
                                    hover:text-brand-700 hover:bg-brand-50 rounded-md transition-colors"
