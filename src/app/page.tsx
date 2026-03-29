@@ -1155,19 +1155,25 @@ export default function Home() {
 
             {/* Capability cards */}
             {[
-              { icon: Zap, title: "AI Gap Analysis", desc: "Catches missing info before generation", color: "text-yellow-400", bg: "bg-yellow-900/20" },
-              { icon: Shield, title: "MSTP Compliance", desc: "Style & terminology checks built in", color: "text-emerald-400", bg: "bg-emerald-900/20" },
-              { icon: Clock, title: "10× Faster", desc: "From raw notes to polished docs", color: "text-blue-400", bg: "bg-blue-900/20" },
+              { icon: Zap, title: "AI Gap Analysis", desc: "Catches missing info before generation", color: "text-yellow-400", bg: "bg-yellow-900/20", href: "https://sulagnasasmal.github.io/doccraft-help-center/feature-generate.html" },
+              { icon: Shield, title: "MSTP Compliance", desc: "Style & terminology checks built in", color: "text-emerald-400", bg: "bg-emerald-900/20", href: "https://sulagnasasmal.github.io/doccraft-help-center/ui-reference.html" },
+              { icon: Clock, title: "10× Faster", desc: "From raw notes to polished docs", color: "text-blue-400", bg: "bg-blue-900/20", href: "https://sulagnasasmal.github.io/doccraft-help-center/getting-started.html" },
             ].map((item) => (
-              <div key={item.title} className="flex items-start gap-2.5 px-3 py-2.5 bg-slate-800/30 border border-slate-700/40 rounded-xl">
+              <a
+                key={item.title}
+                href={item.href}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-start gap-2.5 px-3 py-2.5 bg-slate-800/30 border border-slate-700/40 rounded-xl hover:border-slate-600/60 hover:bg-slate-800/50 transition-colors group"
+              >
                 <div className={`w-6 h-6 rounded-lg ${item.bg} flex items-center justify-center shrink-0`}>
                   <item.icon size={12} className={item.color} />
                 </div>
-                <div>
-                  <p className="text-[0.72rem] font-semibold text-slate-200">{item.title}</p>
+                <div className="min-w-0">
+                  <p className="text-[0.72rem] font-semibold text-slate-200 group-hover:text-white">{item.title}</p>
                   <p className="text-[0.62rem] text-slate-500 mt-0.5 leading-relaxed">{item.desc}</p>
                 </div>
-              </div>
+              </a>
             ))}
 
             {/* Stage-aware status */}
@@ -1234,6 +1240,33 @@ export default function Home() {
                     className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-700/50 transition-colors group"
                   >
                     <span className="w-1 h-1 rounded-full bg-slate-600 group-hover:bg-blue-400 transition-colors shrink-0" />
+                    <span className="text-[0.68rem] text-slate-400 group-hover:text-slate-200 transition-colors truncate">
+                      {item.label}
+                    </span>
+                  </a>
+                ))}
+              </div>
+            </div>
+            {/* Resources */}
+            <div className="px-3 py-2.5 bg-slate-800/30 border border-slate-700/40 rounded-xl">
+              <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                Resources
+              </p>
+              <div className="space-y-0.5">
+                {[
+                  { label: "Blog — Build Log", href: "https://sulagnasasmal.github.io/blog/posts/doccraft-ai-documentation-tool-build-log/", icon: "📝" },
+                  { label: "Portfolio", href: "https://sulagnasasmal.com", icon: "🌐" },
+                  { label: "GitHub", href: "https://github.com/SulagnaSasmal", icon: "⚡" },
+                  { label: "Watch Demo", href: "/demo", icon: "▶" },
+                ].map((item) => (
+                  <a
+                    key={item.label}
+                    href={item.href}
+                    target={item.href.startsWith("/") ? "_self" : "_blank"}
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-700/50 transition-colors group"
+                  >
+                    <span className="text-[0.7rem] shrink-0">{item.icon}</span>
                     <span className="text-[0.68rem] text-slate-400 group-hover:text-slate-200 transition-colors truncate">
                       {item.label}
                     </span>
