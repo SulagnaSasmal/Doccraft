@@ -74,7 +74,7 @@ export default function FeedbackWidget() {
                    bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white
                    rounded-full shadow-lg border border-slate-700/60
                    transition-all duration-200 text-xs font-medium"
-        style={{ bottom: "1.5rem", left: "1.5rem" }}
+        style={{ bottom: "1.5rem", right: "5rem" }}
         aria-label="Give feedback"
       >
         <MessageSquarePlus size={15} />
@@ -87,7 +87,7 @@ export default function FeedbackWidget() {
           className="fixed z-[299] w-72 flex flex-col rounded-2xl shadow-2xl
                      border border-slate-700/60 bg-slate-900 overflow-hidden
                      animate-fade-in-up"
-          style={{ bottom: "5rem", left: "1.5rem" }}
+          style={{ bottom: "5rem", right: "5rem" }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-slate-800/80 border-b border-slate-700/50">
