@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import {
   Play, Pause, Square, RotateCcw, ChevronRight, FileText,
-  Zap, Shield, Clock, CheckCircle2, ExternalLink,
+  Zap, Shield, CheckCircle2, ExternalLink,
   Upload, Search, Sparkles, Edit3, Download, Volume2, VolumeX,
 } from "lucide-react";
 
@@ -138,26 +138,38 @@ const COMPLIANCE_FLAGS = [
 ];
 
 // ── Voice selection ───────────────────────────────────────────────────────────
-// Prefers natural-sounding English voices in priority order
-const PREFERRED_VOICES = [
-  "Google UK English Female",
-  "Microsoft Sonia Online (Natural)",
-  "Microsoft Libby Online (Natural)",
-  "Samantha",
-  "Karen",
-  "Moira",
-  "Tessa",
+// Priority: Microsoft Jenny (Natural) > Aria > Sonia > Google US > any English
+// Jenny is the clearest natural-sounding voice available in Chrome/Edge on Windows 11.
+const PREFERRED_VOICE_FRAGMENTS = [
+  "Jenny",      // Microsoft Jenny Online (Natural) — en-US
+  "Aria",       // Microsoft Aria Online (Natural)  — en-US
+  "Sonia",      // Microsoft Sonia Online (Natural) — en-GB
+  "Libby",      // Microsoft Libby Online (Natural) — en-GB
   "Google US English",
-  "Microsoft Zira",
+  "Samantha",   // macOS
+  "Karen",      // macOS / iOS
+  "Moira",      // macOS
 ];
 
 function pickVoice(voices: SpeechSynthesisVoice[]): SpeechSynthesisVoice | null {
-  for (const name of PREFERRED_VOICES) {
-    const match = voices.find((v) => v.name === name || v.name.includes(name));
+  for (const fragment of PREFERRED_VOICE_FRAGMENTS) {
+    const match = voices.find((v) => v.name.includes(fragment));
     if (match) return match;
   }
   // fallback: any English voice
   return voices.find((v) => v.lang.startsWith("en")) ?? null;
+}
+
+// Robustly wait for voices — Chrome sometimes returns [] on first call
+function getVoices(): Promise<SpeechSynthesisVoice[]> {
+  return new Promise((resolve) => {
+    const immediate = window.speechSynthesis.getVoices();
+    if (immediate.length > 0) { resolve(immediate); return; }
+    const handler = () => resolve(window.speechSynthesis.getVoices());
+    window.speechSynthesis.addEventListener("voiceschanged", handler, { once: true });
+    // safety timeout — resolve with whatever we have after 3 s
+    setTimeout(() => resolve(window.speechSynthesis.getVoices()), 3000);
+  });
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -169,26 +181,25 @@ export default function DemoPage() {
   const [captionWord, setCaptionWord] = useState(0);
   const [typedContent, setTyped]      = useState("");
   const [complianceDone, setCD]       = useState(false);
-  const [voicesReady, setVoicesReady] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState<SpeechSynthesisVoice | null>(null);
 
-  const timerRef    = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const progressRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const captionRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const timerRef     = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const progressRef  = useRef<ReturnType<typeof setInterval> | null>(null);
+  const captionRef   = useRef<ReturnType<typeof setInterval> | null>(null);
   const utteranceRef = useRef<SpeechSynthesisUtterance | null>(null);
+  // callback ref so advanceTo is always current inside utterance.onend
+  const advanceRef   = useRef<(n: number) => void>(() => {});
 
-  const current         = STEPS[step];
-  const narrationWords  = current.narration.split(" ");
+  const current        = STEPS[step];
+  const narrationWords = current.narration.split(" ");
 
-  // Load voices asynchronously (Chrome/Edge fires voiceschanged)
+  // Load voices once on mount — waits until Chrome/Edge has them ready
   useEffect(() => {
     if (typeof window === "undefined" || !window.speechSynthesis) return;
-    const load = () => setVoicesReady(true);
-    if (window.speechSynthesis.getVoices().length > 0) {
-      setVoicesReady(true);
-    } else {
-      window.speechSynthesis.addEventListener("voiceschanged", load, { once: true });
-    }
-    return () => window.speechSynthesis.removeEventListener("voiceschanged", load);
+    getVoices().then((voices) => {
+      const v = pickVoice(voices);
+      setSelectedVoice(v);
+    });
   }, []);
 
   // ── speech synthesis ──────────────────────────────────────────────────────
@@ -199,20 +210,21 @@ export default function DemoPage() {
     utteranceRef.current = null;
   }, []);
 
-  const speak = useCallback((text: string) => {
-    if (!narrate || typeof window === "undefined" || !window.speechSynthesis) return;
+  const speak = useCallback((text: string, onEnd?: () => void) => {
+    if (!narrate || typeof window === "undefined" || !window.speechSynthesis) {
+      onEnd?.();
+      return;
+    }
     stopSpeech();
     const u = new SpeechSynthesisUtterance(text);
-    u.rate  = 0.88;
-    u.pitch = 1.05;
-    u.lang  = "en-GB";
-    if (voicesReady) {
-      const v = pickVoice(window.speechSynthesis.getVoices());
-      if (v) u.voice = v;
-    }
+    u.rate  = 0.90;
+    u.pitch = 1.0;
+    u.lang  = "en-US";
+    if (selectedVoice) u.voice = selectedVoice;
+    if (onEnd) u.onend = () => onEnd();
     utteranceRef.current = u;
     window.speechSynthesis.speak(u);
-  }, [narrate, stopSpeech, voicesReady]);
+  }, [narrate, stopSpeech, selectedVoice]);
 
   // ── caption word ticker ───────────────────────────────────────────────────
   const clearCaption = useCallback(() => {
@@ -254,6 +266,9 @@ export default function DemoPage() {
     setStep(nextStep);
   }, [stopSpeech, clearTimers]);
 
+  // keep advanceRef current so utterance.onend always calls the latest version
+  useEffect(() => { advanceRef.current = advanceTo; }, [advanceTo]);
+
   // ── typewriter on upload step ─────────────────────────────────────────────
   useEffect(() => {
     if (STEPS[step].id !== "upload") { setTyped(""); return; }
@@ -283,9 +298,10 @@ export default function DemoPage() {
     const dur   = current.duration;
     const words = current.narration.split(" ");
 
-    speak(current.narration);
+    // Caption ticker runs for `dur` ms — visual pacing independent of TTS length
     startCaption(dur, words);
 
+    // Progress bar runs for `dur` ms for visual feedback
     let elapsed = 0;
     const tick  = 50;
     progressRef.current = setInterval(() => {
@@ -293,11 +309,17 @@ export default function DemoPage() {
       setProgress(Math.min(100, (elapsed / dur) * 100));
     }, tick);
 
-    timerRef.current = setTimeout(() => advanceTo(step + 1), dur);
+    // Advance on speech end when narrating; on timer when not
+    if (narrate) {
+      // Step advances ONLY when the utterance finishes — never mid-sentence
+      speak(current.narration, () => advanceRef.current(step + 1));
+    } else {
+      timerRef.current = setTimeout(() => advanceRef.current(step + 1), dur);
+    }
 
     return () => { clearTimers(); stopSpeech(); };
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [playing, step]);
+  }, [playing, step, narrate]);
 
   // stop speech when narrate toggled off
   useEffect(() => {
