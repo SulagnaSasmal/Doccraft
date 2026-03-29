@@ -405,6 +405,11 @@
   left: var(--it-left, 0px);
 }
 
+/* Main page hero background gradient */
+.page-hero-bg {
+  background: radial-gradient(ellipse 80% 60% at 50% -10%, rgba(37,99,235,0.12) 0%, transparent 70%), #020817;
+}
+
 /* Subtle dot-grid background — layered under content */
 .bg-grid-slate {
   background-image: radial-gradient(

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
-import { GitGraph, Loader2, Copy, Check, Plus, RefreshCw, X, ChevronDown } from "lucide-react";
+import { GitGraph, Loader2, Copy, Check, Plus, RefreshCw, X, ChevronDown, ExternalLink } from "lucide-react";
 import { safeResJson } from "@/lib/safeResJson";
 
 type DiagramType = "flowchart" | "sequenceDiagram" | "stateDiagram-v2";
@@ -180,7 +180,48 @@ export default function DiagramPanel({
             </details>
 
             {/* Actions */}
-            <div className="flex items-center gap-2 justify-end pt-1">
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              {/* External tools row */}
+              <div className="flex items-center gap-1.5 mr-auto">
+                <span className="text-[0.62rem] text-ink-4 font-medium">Open in:</span>
+                <a
+                  href="https://www.napkin.ai"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 text-[0.65rem] font-medium text-ink-3
+                             hover:text-brand-600 hover:bg-surface-1 rounded-md border border-surface-3
+                             transition-colors"
+                  title="Paste your Mermaid code into Napkin AI to create beautiful visuals"
+                >
+                  <ExternalLink size={10} />
+                  Napkin AI
+                </a>
+                <a
+                  href={`https://app.diagrams.net/?splash=0#H`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={copyCode}
+                  className="flex items-center gap-1 px-2 py-1 text-[0.65rem] font-medium text-ink-3
+                             hover:text-brand-600 hover:bg-surface-1 rounded-md border border-surface-3
+                             transition-colors"
+                  title="Opens draw.io — code is copied to clipboard, use Extras → Edit Diagram to paste"
+                >
+                  <ExternalLink size={10} />
+                  draw.io
+                </a>
+                <a
+                  href="https://excalidraw.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 px-2 py-1 text-[0.65rem] font-medium text-ink-3
+                             hover:text-brand-600 hover:bg-surface-1 rounded-md border border-surface-3
+                             transition-colors"
+                  title="Open Excalidraw for hand-drawn style diagrams"
+                >
+                  <ExternalLink size={10} />
+                  Excalidraw
+                </a>
+              </div>
               <button
                 onClick={() => generate()}
                 className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium text-ink-2

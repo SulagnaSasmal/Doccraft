@@ -25,6 +25,7 @@ import {
 import UtilityToolbox from "@/components/doccraft/UtilityToolbox";
 import DocumentLibrary from "@/components/doccraft/DocumentLibrary";
 import OnboardingTour from "@/components/OnboardingTour";
+import HelpAgent from "@/components/HelpAgent";
 
 export type AppStage = "upload" | "analyzing" | "questions" | "generating" | "editing";
 
@@ -81,6 +82,7 @@ export default function Home() {
   const generationAbortRef = useRef<AbortController | null>(null);
   const [heroDragging, setHeroDragging] = useState(false);
   const heroFileRef = useRef<HTMLInputElement>(null);
+  const leftPanelRef = useRef<HTMLDivElement>(null);
   const [justGenerated, setJustGenerated] = useState(false);
 
   // Resizable left panel — 320 ensures Configuration labels are fully visible at zoom 100%
@@ -125,6 +127,13 @@ export default function Home() {
   const [docTitle, setDocTitle] = useState("");
   const [rightTab, setRightTab] = useState<"insights" | "shortcuts">("insights");
   const [leftOpen, setLeftOpen] = useState(true);
+
+  // Sync resizable panel width imperatively (avoids inline style prop)
+  useEffect(() => {
+    if (leftPanelRef.current) {
+      leftPanelRef.current.style.width = leftOpen ? `${leftWidth}px` : "0px";
+    }
+  }, [leftOpen, leftWidth]);
 
   // CMD+K keyboard shortcut for command palette
   useEffect(() => {
@@ -334,6 +343,16 @@ export default function Home() {
       const data = await safeResJson(res);
       setQuestions(data.questions || []);
       setStage("questions");
+
+      // Track analyze event (no content logged)
+      fetch("/api/track", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          event: "analyze",
+          properties: { docType: config.docType, audience: config.audience, tone: config.tone, questionCount: (data.questions || []).length },
+        }),
+      }).catch(() => {});
     } catch (err: any) {
       const msg = err.name === "AbortError"
         ? "Request timed out — the server took too long. Please try again with shorter content."
@@ -552,12 +571,7 @@ export default function Home() {
   ].filter(Boolean) as string[] : [];
 
   return (
-    <div
-      className="min-h-screen flex flex-col bg-slate-950 bg-grid-slate animate-in-faded"
-      style={{
-        background: "radial-gradient(ellipse 80% 60% at 50% -10%, rgba(37,99,235,0.12) 0%, transparent 70%), #020817",
-      }}
-    >
+    <div className="min-h-screen flex flex-col page-hero-bg bg-grid-slate animate-in-faded">
       <Header
         stage={stage}
         onStartOver={handleStartOver}
@@ -580,11 +594,11 @@ export default function Home() {
       )}
 
       {/* ── Business Hub — three-column layout ──────────────────────── */}
-      <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0 }}>
+      <div className="flex-1 flex overflow-hidden min-h-0">
 
         {/* Left: Utility Toolbox (resizable, collapsible) */}
         <div
-          style={leftOpen ? { width: leftWidth } : { width: 0 }}
+          ref={leftPanelRef}
           className="shrink-0 flex flex-col overflow-hidden relative transition-all duration-200"
         >
           <UtilityToolbox
@@ -803,7 +817,7 @@ export default function Home() {
           {stage === "generating" && (
             <div className="flex-1 flex flex-col items-center justify-center p-8 animate-fade-in-up">
               <div className="w-full max-w-md mb-8">
-                <div className="bg-slate-900/80 rounded-2xl border border-slate-800/60 p-6 skeleton-scanner" style={{ minHeight: "180px" }}>
+                <div className="bg-slate-900/80 rounded-2xl border border-slate-800/60 p-6 skeleton-scanner min-h-[180px]">
                   <div className="h-5 w-3/5 skeleton-shimmer rounded mb-4" />
                   <div className="h-3 w-full skeleton-shimmer rounded mb-2.5" />
                   <div className="h-3 w-11/12 skeleton-shimmer rounded mb-2.5" />
@@ -1198,6 +1212,9 @@ export default function Home() {
 
       {/* First-run onboarding tour */}
       <OnboardingTour />
+
+      {/* Floating AI Help Agent */}
+      <HelpAgent />
     </div>
   );
 }

@@ -57,7 +57,7 @@ export default function AuthModal({ onClose, onAuth }: {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-start justify-center pt-20 p-4">
       <div className="bg-surface-0 rounded-2xl shadow-2xl w-full max-w-md border border-surface-3 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-surface-2">

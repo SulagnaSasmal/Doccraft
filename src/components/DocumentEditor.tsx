@@ -690,6 +690,19 @@ ${bodyHTML}
                   <GitGraph size={13} />
                   Diagram
                 </button>
+                {/* Image placeholder */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    onChange(content + "\n\n![TODO: describe what this image shows](image-placeholder.png)\n> 📷 **\\[IMAGE PLACEHOLDER\\]** — Replace with an actual screenshot or diagram.\n");
+                    setShowMore(false);
+                  }}
+                  className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-ink-2 hover:bg-surface-1 transition-colors"
+                  title="Insert an image placeholder block into the document"
+                >
+                  <ImageIcon size={13} />
+                  Image Placeholder
+                </button>
                 {/* Divider */}
                 <div className="h-px bg-surface-2 mx-2 my-0.5" />
                 {/* Notion copy */}
