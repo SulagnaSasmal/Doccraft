@@ -10,7 +10,11 @@ Transform raw content into polished, structured documentation using AI. Feed it 
 ## Features
 
 ### Input & Context
-- **Multi-format input** — Upload text files, paste content, drag-and-drop images
+- **Multi-format input** — Upload TXT, MD, CSV, JSON, PNG, JPG, WEBP, GIF, TIFF, PDF, and DOCX files; paste raw content; drag-and-drop anything
+- **PDF text extraction** — Server-side `pdf-parse` (PDF.js) correctly resolves ToUnicode CMap tables so modern Word-exported PDFs extract cleanly, not as garbled characters
+- **Image OCR** — Images sent to OpenAI Vision (GPT-4o-mini) for high-accuracy text extraction
+- **DOCX support** — Mammoth-based parser preserves heading structure and handles tracked changes
+- **Instant content preview** — Extracted text appears immediately after upload, no toggle needed
 - **Context Layer** — Upload previous docs, style guides, glossaries, or OpenAPI specs to make the AI write consistently with your existing content
 - **GitHub URL input** — Paste any public GitHub repo, file, or folder URL — content fetched and added to context automatically
 - **Structured glossary** — Upload a `.json` glossary with `forbidden_terms`, `preferred_terms`, and `approved_terms` to enforce your terminology automatically
@@ -50,7 +54,13 @@ Transform raw content into polished, structured documentation using AI. Feed it 
 - **Copy to clipboard** — One click
 
 ### History
+
 - **Document history** — Last 10 sessions saved to localStorage automatically; restore any previous document with one click
+
+### Help & Feedback
+
+- **AI Help Agent** — Floating chat widget (bottom-right) powered by OpenAI; answers questions about how the tool works; pre-loaded starter questions
+- **Feedback widget** — Floating mood picker (bottom-left); emoji reaction + optional message; tracked via `/api/track` and emailed via Resend
 
 ---
 
@@ -165,11 +175,13 @@ Upload a `.json` file matching this schema to enforce terminology automatically:
 1. Push your code to GitHub
 2. Go to [vercel.com](https://vercel.com) → Import your repo
 3. Add environment variables:
-   - `OPENAI_API_KEY` — required for AI generation
+   - `OPENAI_API_KEY` — required for AI generation and image OCR
    - `NEXT_PUBLIC_SUPABASE_URL` — required for auth and cloud save
    - `NEXT_PUBLIC_SUPABASE_ANON_KEY` — required for auth and cloud save
    - `GITHUB_TOKEN` — optional, for GitHub repo imports
-        - `DOCCRAFT_WEBHOOK_SECRET` — required if you want CI/CD or GitHub Actions to call the webhook endpoint
+   - `DOCCRAFT_WEBHOOK_SECRET` — required for CI/CD or GitHub Actions webhook endpoint
+   - `RESEND_API_KEY` — optional, enables feedback emails (get free key at resend.com)
+   - `RESEND_TO_EMAIL` — your email address to receive feedback notifications
 4. Deploy
 
 Vercel auto-deploys on every push to `main`.

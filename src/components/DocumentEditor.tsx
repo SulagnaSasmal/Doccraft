@@ -628,7 +628,7 @@ ${bodyHTML}
             </button>
 
             {showMore && (
-              <div className="absolute right-0 top-full mt-1.5 z-50 w-44 rounded-xl border border-surface-3 bg-surface-0 shadow-xl overflow-hidden">
+              <div className="absolute left-0 top-full mt-1.5 z-50 w-48 rounded-xl border border-surface-3 bg-surface-0 shadow-xl overflow-hidden">
                 {/* Diff */}
                 <button
                   type="button"

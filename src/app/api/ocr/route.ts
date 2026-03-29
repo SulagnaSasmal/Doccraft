@@ -1,5 +1,13 @@
 import OpenAI from "openai";
 import { NextRequest, NextResponse } from "next/server";
+import * as pdfParseModule from "pdf-parse";
+// pdf-parse ships both CJS and ESM; pick whichever export is available
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const pdfParse: (buf: Buffer, opts?: Record<string, unknown>) => Promise<{ text: string; numpages: number }> =
+  (pdfParseModule as any).default ?? (pdfParseModule as any);
+
+// Must run on Node.js — pdf-parse uses Buffer APIs not available in Edge
+export const runtime = "nodejs";
 
 const SUPPORTED_IMAGE_TYPES = [
   "image/png",
@@ -49,11 +57,8 @@ export async function POST(req: NextRequest) {
     }
 
     const apiKey = process.env.OPENAI_API_KEY;
-    if (!apiKey) {
-      return NextResponse.json({ error: "OpenAI API key not configured" }, { status: 500 });
-    }
+    const openai = apiKey ? new OpenAI({ apiKey }) : null;
 
-    const openai = new OpenAI({ apiKey });
     const results: { name: string; text: string; error?: string }[] = [];
 
     for (const file of files) {
@@ -61,6 +66,10 @@ export async function POST(req: NextRequest) {
 
       if (SUPPORTED_IMAGE_TYPES.includes(mimeType)) {
         // ── Image: send to OpenAI Vision ──────────────────────────────────
+        if (!openai) {
+          results.push({ name: file.name, text: "", error: "OpenAI API key not configured — cannot process images." });
+          continue;
+        }
         try {
           const arrayBuffer = await file.arrayBuffer();
           const base64 = arrayBufferToBase64(arrayBuffer);
@@ -93,20 +102,21 @@ export async function POST(req: NextRequest) {
           results.push({ name: file.name, text: "", error: msg });
         }
       } else if (mimeType === "application/pdf") {
-        // ── PDF: extract embedded text via raw content stream parsing ────
-        // This covers text-based (non-scanned) PDFs without native dependencies.
+        // ── PDF: use pdf-parse for proper ToUnicode/CMap-aware extraction ──
         try {
           const arrayBuffer = await file.arrayBuffer();
-          const text = extractPdfText(new Uint8Array(arrayBuffer));
+          const buffer = Buffer.from(arrayBuffer);
+          const data = await pdfParse(buffer);
+          const text = data.text?.trim() ?? "";
 
-          if (text.trim().length > 30) {
-            results.push({ name: file.name, text: text.trim() });
+          if (text.length > 30) {
+            results.push({ name: file.name, text });
           } else {
             results.push({
               name: file.name,
               text: "",
               error:
-                "This appears to be a scanned (image-based) PDF. Convert each page to a PNG or JPG and upload those for OCR.",
+                "This appears to be a scanned (image-based) PDF with no embedded text. Convert each page to a PNG or JPG and upload those for OCR.",
             });
           }
         } catch (err: unknown) {
@@ -133,49 +143,4 @@ export async function POST(req: NextRequest) {
     const message = err instanceof Error ? err.message : "OCR failed";
     return NextResponse.json({ error: message }, { status: 500 });
   }
-}
-
-/**
- * Lightweight PDF text extractor that works without native binaries.
- * Parses BT…ET text blocks from PDF content streams — covers most text-based PDFs.
- */
-function extractPdfText(bytes: Uint8Array): string {
-  const decoder = new TextDecoder("latin1");
-  const raw = decoder.decode(bytes);
-
-  const chunks: string[] = [];
-
-  // Extract text from BT...ET blocks
-  const btEtRe = /BT([\s\S]*?)ET/g;
-  let match: RegExpExecArray | null;
-  while ((match = btEtRe.exec(raw)) !== null) {
-    const block = match[1];
-    // Grab content inside parentheses: (hello)
-    const parenRe = /\(([^)]*(?:\\.[^)]*)*)\)/g;
-    let pm: RegExpExecArray | null;
-    while ((pm = parenRe.exec(block)) !== null) {
-      const decoded = pm[1]
-        .replace(/\\n/g, "\n")
-        .replace(/\\r/g, "\r")
-        .replace(/\\t/g, "\t")
-        .replace(/\\\\/g, "\\")
-        .replace(/\\\(/g, "(")
-        .replace(/\\\)/g, ")");
-      if (decoded.trim()) chunks.push(decoded);
-    }
-    // Grab hex strings: <48656c6c6f>
-    const hexRe = /<([0-9a-fA-F]+)>/g;
-    let hm: RegExpExecArray | null;
-    while ((hm = hexRe.exec(block)) !== null) {
-      const hex = hm[1];
-      if (hex.length % 2 !== 0) continue;
-      let str = "";
-      for (let i = 0; i < hex.length; i += 2) {
-        str += String.fromCharCode(parseInt(hex.slice(i, i + 2), 16));
-      }
-      if (str.trim() && /[\x20-\x7E]/.test(str)) chunks.push(str);
-    }
-  }
-
-  return chunks.join(" ").replace(/ {2,}/g, " ").trim();
 }

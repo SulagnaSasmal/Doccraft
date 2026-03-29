@@ -84,13 +84,14 @@ export default function HelpAgent() {
 
   return (
     <>
-      {/* Floating trigger button */}
+      {/* Floating trigger button — anchored to bottom-right of viewport */}
       <button
         type="button"
         onClick={() => setOpen((v) => !v)}
-        className="fixed bottom-6 right-6 z-[300] flex items-center justify-center w-12 h-12
+        className="fixed z-[300] flex items-center justify-center w-12 h-12
                    bg-blue-600 hover:bg-blue-700 text-white rounded-full shadow-lg
                    transition-all duration-200 hover:scale-105"
+        style={{ bottom: "1.5rem", right: "1.5rem" }}
         aria-label="Open help assistant"
       >
         {open ? <ChevronDown size={20} /> : <MessageCircle size={20} />}
@@ -102,13 +103,13 @@ export default function HelpAgent() {
         )}
       </button>
 
-      {/* Chat panel */}
+      {/* Chat panel — floats above the trigger button */}
       {open && (
         <div
-          className="fixed bottom-22 right-6 z-[299] w-80 flex flex-col rounded-2xl shadow-2xl
+          className="fixed z-[299] w-80 flex flex-col rounded-2xl shadow-2xl
                      border border-slate-700/60 bg-slate-900 overflow-hidden
                      animate-fade-in-up"
-          style={{ maxHeight: "420px" }}
+          style={{ bottom: "5rem", right: "1.5rem", maxHeight: "480px" }}
         >
           {/* Header */}
           <div className="flex items-center justify-between px-4 py-3 bg-slate-800/80 border-b border-slate-700/50">

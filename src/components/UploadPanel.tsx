@@ -303,18 +303,16 @@ export default function UploadPanel({
           </div>
         )}
 
-        {/* Content preview */}
+        {/* Content preview — auto-expanded so users see extracted text immediately */}
         {uploadedContent && (
           <div className="mt-4">
-            <details className="group">
-              <summary className="text-xs font-medium text-ink-3 cursor-pointer hover:text-ink-2 transition-colors">
-                Preview loaded content ({uploadedContent.length.toLocaleString()} characters)
-              </summary>
-              <pre className="mt-2 p-3 bg-surface-1 rounded-lg text-xs text-ink-2 max-h-40 overflow-auto whitespace-pre-wrap font-mono border border-surface-2">
-                {uploadedContent.slice(0, 2000)}
-                {uploadedContent.length > 2000 && "\n\n… (truncated)"}
-              </pre>
-            </details>
+            <p className="text-xs font-medium text-ink-3 mb-2">
+              Extracted content <span className="text-ink-4">({uploadedContent.length.toLocaleString()} characters)</span>
+            </p>
+            <pre className="p-3 bg-surface-1 rounded-lg text-xs text-ink-2 max-h-52 overflow-auto whitespace-pre-wrap font-mono border border-surface-2">
+              {uploadedContent.slice(0, 3000)}
+              {uploadedContent.length > 3000 && "\n\n… (truncated — full content sent to AI)"}
+            </pre>
           </div>
         )}
       </div>
