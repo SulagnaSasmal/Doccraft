@@ -292,15 +292,55 @@ export default function Home() {
     const names: string[] = [];
     for (const file of Array.from(files)) {
       names.push(file.name);
+      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+      const isImage = file.type.startsWith("image/");
+      const isDocx =
+        file.type.includes("word") ||
+        file.type.includes("officedocument") ||
+        file.name.toLowerCase().endsWith(".docx") ||
+        file.name.toLowerCase().endsWith(".doc");
+
       if (file.type === "text/plain" || file.name.endsWith(".md") || file.name.endsWith(".csv")) {
         contents.push(await file.text());
-      } else if (file.type.startsWith("image/")) {
-        contents.push(`[Image: ${file.name}]\n(Image uploaded — will be analyzed by AI vision)`);
       } else if (file.name.endsWith(".json")) {
         contents.push(`[JSON File: ${file.name}]\n${await file.text()}`);
+      } else if (isPdf || isImage) {
+        try {
+          const fd = new FormData();
+          fd.append("files", file);
+          const res = await fetch("/api/ocr", { method: "POST", body: fd });
+          const data = await res.json();
+          if (data.combined && data.combined.trim().length > 10) {
+            contents.push(data.combined.trim());
+          } else if (data.results?.[0]?.error) {
+            contents.push(`[${file.name}] — ${data.results[0].error}`);
+          } else {
+            contents.push(`[${file.name}] — No readable text found. Try copy-pasting the content instead.`);
+          }
+        } catch {
+          contents.push(`[${file.name}] — Extraction failed. Try copy-pasting the content instead.`);
+        }
+      } else if (isDocx) {
+        try {
+          const fd = new FormData();
+          fd.append("file", file);
+          const res = await fetch("/api/docx", { method: "POST", body: fd });
+          const data = await res.json();
+          if (data.text && data.text.trim().length > 10) {
+            const header = data.hasTrackedChanges
+              ? `[${file.name}] (Track Changes detected — accepted insertions included, deletions appended)\n\n`
+              : `[${file.name}]\n\n`;
+            contents.push(header + data.text.trim());
+          } else if (data.error) {
+            contents.push(`[${file.name}] — ${data.error} Try copy-pasting content using the Paste tab.`);
+          } else {
+            contents.push(`[${file.name}] — No text found. Try copy-pasting content using the Paste tab.`);
+          }
+        } catch {
+          contents.push(`[${file.name}] — DOCX extraction failed. Try copy-pasting content using the Paste tab.`);
+        }
       } else {
-        try { contents.push(await file.text()); }
-        catch { contents.push(`[File: ${file.name}] (Binary — text extraction unavailable in browser)`); }
+        contents.push(`[${file.name}] — Unsupported format. Try copy-pasting the content using the Paste tab.`);
       }
     }
     handleFilesUploaded(contents.join("\n\n---\n\n"), names);
@@ -452,6 +492,10 @@ export default function Home() {
       setStreamedDoc("");
       setStage("editing");
       setJustGenerated(true);
+
+      // Auto-set document title from first # heading in the generated markdown
+      const firstHeading = assembled.match(/^#\s+(.+)$/m);
+      if (firstHeading) setDocTitle(firstHeading[1].trim());
       setFeedbackGiven(null);
       setTimeout(() => setJustGenerated(false), 8000);
 
@@ -534,6 +578,8 @@ export default function Home() {
     setGeneratedDoc(session.generatedDoc);
     setBaselineDoc(session.generatedDoc);
     setStage("editing");
+    const firstHeading = session.generatedDoc.match(/^#\s+(.+)$/m);
+    if (firstHeading) setDocTitle(firstHeading[1].trim());
   };
 
   const handleDirectLoadMarkdown = (content: string, fileName: string) => {
@@ -542,6 +588,8 @@ export default function Home() {
     setFileNames([fileName]);
     setStage("editing");
     setError("");
+    const firstHeading = content.match(/^#\s+(.+)$/m);
+    if (firstHeading) setDocTitle(firstHeading[1].trim());
   };
 
   const handleSaveVersion = () => {
