@@ -96,11 +96,25 @@ export default function UploadPanel({
           contents.push(`[${file.name}] — Extraction failed. Try copy-pasting the content instead.`);
         }
       } else if (isDocx) {
-        // DOCX is binary — file.text() would produce garbled output
-        contents.push(
-          `[${file.name}] — DOCX files cannot be read directly in the browser.\n` +
-          `Please open the document and copy-paste its text content using the Paste tab.`
-        );
+        // Route through /api/docx — mammoth-based parser, handles track changes
+        try {
+          const fd = new FormData();
+          fd.append("file", file);
+          const res = await fetch("/api/docx", { method: "POST", body: fd });
+          const data = await res.json();
+          if (data.text && data.text.trim().length > 10) {
+            const header = data.hasTrackedChanges
+              ? `[${file.name}] (Track Changes detected — accepted insertions included, deletions appended)\n\n`
+              : `[${file.name}]\n\n`;
+            contents.push(header + data.text.trim());
+          } else if (data.error) {
+            contents.push(`[${file.name}] — ${data.error} Try copy-pasting content using the Paste tab.`);
+          } else {
+            contents.push(`[${file.name}] — No text found. Try copy-pasting content using the Paste tab.`);
+          }
+        } catch {
+          contents.push(`[${file.name}] — DOCX extraction failed. Try copy-pasting content using the Paste tab.`);
+        }
       } else {
         contents.push(`[${file.name}] — Unsupported format. Try copy-pasting the content using the Paste tab.`);
       }

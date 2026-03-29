@@ -147,10 +147,10 @@ export default function GapAnalysis({
           <ArrowLeft size={14} />
           Back to upload
         </button>
-        <h2 className="font-display text-xl font-bold text-ink-0">
+        <h2 className="font-display text-xl font-bold text-slate-50">
           Information Gap Analysis
         </h2>
-        <p className="text-sm text-ink-2 mt-1">
+        <p className="text-sm text-slate-400 mt-1">
           The AI identified {total} questions that would help produce better documentation.
           Answer what you can — skip what you don't know yet.
         </p>
@@ -163,7 +163,7 @@ export default function GapAnalysis({
               style={{ width: `${(answered / total) * 100}%` }}
             />
           </div>
-          <span className="text-xs font-medium text-ink-2">
+          <span className="text-xs font-medium text-slate-400">
             {answered}/{total}
           </span>
         </div>
@@ -193,7 +193,7 @@ export default function GapAnalysis({
         {optionalQs.length > 0 && (
           <div>
             <div className="flex items-center justify-between mb-3">
-              <span className="text-xs font-bold text-ink-3 uppercase tracking-wider">
+              <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
                 Optional ({optionalQs.length})
               </span>
               <button
@@ -223,7 +223,7 @@ export default function GapAnalysis({
       {/* Submit */}
       <div className="mt-8 pb-8 space-y-3">
         <div className="flex items-center justify-between">
-          <p className="text-xs text-ink-3">
+          <p className="text-xs text-slate-500">
             Skipped questions will be marked with ⚠️ in the generated doc
           </p>
           <button
