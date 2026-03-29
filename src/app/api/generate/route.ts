@@ -6,7 +6,16 @@ import { checkRateLimit } from "@/lib/rateLimit";
 export const runtime = 'edge'; // 25s on Hobby, 30s on Pro (vs 10s for Node.js serverless on Hobby)
 export const maxDuration = 30;
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+// Use Groq (free, no credit risk) if GROQ_API_KEY is set, else fall back to OpenAI
+const isGroq = !!process.env.GROQ_API_KEY;
+const openai = new OpenAI(
+  isGroq
+    ? { apiKey: process.env.GROQ_API_KEY, baseURL: "https://api.groq.com/openai/v1" }
+    : { apiKey: process.env.OPENAI_API_KEY }
+);
+// Groq: llama-3.3-70b-versatile ≈ GPT-4o-mini quality, completely free with hard rate limits
+const MODEL_FAST = isGroq ? "llama-3.1-8b-instant" : "gpt-4o-mini";
+const MODEL_QUALITY = isGroq ? "llama-3.3-70b-versatile" : "gpt-4o-mini";
 
 const TEMPLATES: Record<string, string> = {
   "user-guide": `Structure: 
@@ -141,7 +150,7 @@ IMPORTANT: Return ONLY the JSON array, no markdown fences, no explanation. Examp
 [{"id":"q1","question":"What happens when...","category":"missing","priority":"critical"}]`;
 
   const response = await openai.chat.completions.create({
-    model: "gpt-4o-mini",
+    model: MODEL_FAST,
     messages: [
       { role: "system", content: systemPrompt },
       {
@@ -182,9 +191,10 @@ IMPORTANT: Return ONLY the JSON array, no markdown fences, no explanation. Examp
 }
 
 async function handleGenerate(content: string, config: any, answers: any[], contextText?: string) {
-  const response = await openai.chat.completions.create(
-    buildGenerateMessages(content, config, answers, contextText)
-  );
+  const response = await openai.chat.completions.create({
+    ...buildGenerateMessages(content, config, answers, contextText),
+    model: MODEL_QUALITY,
+  });
 
   const document = response.choices[0]?.message?.content || "# Error\nFailed to generate documentation.";
 
@@ -194,6 +204,7 @@ async function handleGenerate(content: string, config: any, answers: any[], cont
 async function handleGenerateStream(content: string, config: any, answers: any[], contextText?: string) {
   const completion = await openai.chat.completions.create({
     ...buildGenerateMessages(content, config, answers, contextText),
+    model: MODEL_QUALITY,
     stream: true,
   });
 

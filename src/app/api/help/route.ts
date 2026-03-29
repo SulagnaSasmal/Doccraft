@@ -3,7 +3,13 @@ import OpenAI from "openai";
 
 export const runtime = "edge";
 
-const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+const isGroq = !!process.env.GROQ_API_KEY;
+const openai = new OpenAI(
+  isGroq
+    ? { apiKey: process.env.GROQ_API_KEY, baseURL: "https://api.groq.com/openai/v1" }
+    : { apiKey: process.env.OPENAI_API_KEY }
+);
+const MODEL = isGroq ? "llama-3.1-8b-instant" : "gpt-4o-mini";
 
 const SYSTEM_PROMPT = `You are the Doccraft Help Assistant — a concise, friendly AI embedded inside the Doccraft app.
 
@@ -56,7 +62,7 @@ export async function POST(req: NextRequest) {
     }
 
     const response = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
+      model: MODEL,
       messages: [
         { role: "system", content: SYSTEM_PROMPT },
         ...messages.slice(-10), // keep last 10 turns for context

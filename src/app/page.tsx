@@ -20,7 +20,7 @@ import {
   FileText, Upload, Sun, Moon, RotateCcw,
   Download, Copy, Users, Webhook, Palette,
   Search, Scissors, Layers, ScanText, GitGraph, ImageIcon,
-  PanelLeft, Keyboard,
+  PanelLeft, Keyboard, ThumbsUp, ThumbsDown,
 } from "lucide-react";
 import UtilityToolbox from "@/components/doccraft/UtilityToolbox";
 import DocumentLibrary from "@/components/doccraft/DocumentLibrary";
@@ -84,6 +84,7 @@ export default function Home() {
   const heroFileRef = useRef<HTMLInputElement>(null);
   const leftPanelRef = useRef<HTMLDivElement>(null);
   const [justGenerated, setJustGenerated] = useState(false);
+  const [feedbackGiven, setFeedbackGiven] = useState<"up" | "down" | null>(null);
 
   // Resizable left panel — 320 ensures Configuration labels are fully visible at zoom 100%
   const [leftWidth, setLeftWidth] = useState(320);
@@ -451,7 +452,8 @@ export default function Home() {
       setStreamedDoc("");
       setStage("editing");
       setJustGenerated(true);
-      setTimeout(() => setJustGenerated(false), 6000);
+      setFeedbackGiven(null);
+      setTimeout(() => setJustGenerated(false), 8000);
 
       addSession({
         config,
@@ -875,6 +877,42 @@ export default function Home() {
                         </span>
                       ))}
                       <span className="text-[0.65rem] text-slate-600">· or publish to GitHub ↓</span>
+                    </div>
+                    {/* Thumbs feedback */}
+                    <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-700/30">
+                      <span className="text-[0.65rem] text-slate-500">Was this useful?</span>
+                      {feedbackGiven ? (
+                        <span className="text-[0.65rem] text-emerald-400">Thanks for your feedback!</span>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFeedbackGiven("up");
+                              fetch("/api/track", { method: "POST", headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ event: "feedback", properties: { rating: "up", docType: config.docType } }) }).catch(() => {});
+                            }}
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[0.65rem] text-slate-400
+                                       hover:bg-emerald-600/20 hover:text-emerald-400 border border-slate-700/50
+                                       hover:border-emerald-500/30 transition-all"
+                          >
+                            <ThumbsUp size={11} /> Yes
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setFeedbackGiven("down");
+                              fetch("/api/track", { method: "POST", headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({ event: "feedback", properties: { rating: "down", docType: config.docType } }) }).catch(() => {});
+                            }}
+                            className="flex items-center gap-1 px-2 py-1 rounded-lg text-[0.65rem] text-slate-400
+                                       hover:bg-red-600/20 hover:text-red-400 border border-slate-700/50
+                                       hover:border-red-500/30 transition-all"
+                          >
+                            <ThumbsDown size={11} /> Needs work
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
                   <button

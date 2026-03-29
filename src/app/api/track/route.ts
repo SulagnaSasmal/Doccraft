@@ -3,9 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 export const runtime = "edge";
 
 /**
- * Lightweight event tracking endpoint.
- * All events are logged to stdout (visible in Vercel Functions logs).
- * Replace with a real analytics service (PostHog, Mixpanel, Supabase) when ready.
+ * Event tracking endpoint.
+ * - Always logs to stdout (visible in Vercel Functions logs).
+ * - When POSTHOG_API_KEY is set, also forwards events to PostHog (1M events/month free).
+ *   Get a free key at https://posthog.com — add POSTHOG_API_KEY and POSTHOG_HOST to .env.local
  */
 export async function POST(req: NextRequest) {
   try {
@@ -21,21 +22,39 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing event name" }, { status: 400 });
     }
 
-    // Sanitize — strip any PII from properties before logging
+    // Sanitize — never log PII or user content
     const safe = { ...properties };
     delete safe.email;
     delete safe.password;
-    delete safe.content; // never log user content
+    delete safe.content;
+
+    const maskedIp = ip.replace(/\.\d+$/, ".x");
 
     const entry = {
       ts: new Date().toISOString(),
-      ip: ip.replace(/\.\d+$/, ".x"), // mask last octet
+      ip: maskedIp,
       event,
       ...safe,
     };
 
-    // In Vercel, console.log goes to Functions logs (searchable)
+    // Always log to Vercel Functions stdout
     console.log("[doccraft:track]", JSON.stringify(entry));
+
+    // Forward to PostHog if configured
+    if (process.env.POSTHOG_API_KEY) {
+      const host = process.env.POSTHOG_HOST ?? "https://us.i.posthog.com";
+      fetch(`${host}/capture/`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          api_key: process.env.POSTHOG_API_KEY,
+          event,
+          distinct_id: maskedIp, // anonymised; replace with user.id once auth is enabled
+          timestamp: new Date().toISOString(),
+          properties: { ...safe, $ip: maskedIp, source: "doccraft" },
+        }),
+      }).catch(() => {}); // fire-and-forget, never block the response
+    }
 
     return NextResponse.json({ ok: true });
   } catch {
