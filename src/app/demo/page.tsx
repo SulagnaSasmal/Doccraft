@@ -15,12 +15,10 @@ const STEPS = [
     title: "DocCraft AI",
     subtitle: "Intelligent Documentation Generator",
     narration:
-      "DocCraft AI is an intelligent documentation generator. " +
-      "It is built around a single question that most AI writing tools never ask: " +
+      "DocCraft AI is an intelligent documentation generator built around a single question that most AI writing tools never ask: " +
       "what is missing from your source material before you write a single word? " +
-      "Every other tool generates immediately. DocCraft analyses first. " +
-      "That one difference changes everything about the quality of what comes out.",
-    duration: 9000,
+      "Every other tool generates immediately. DocCraft analyses first.",
+    duration: 7000,
   },
   {
     id: "upload",
@@ -29,23 +27,23 @@ const STEPS = [
     narration:
       "The first step is uploading your source material, in whatever format it arrives. " +
       "DocCraft accepts PDF, Word documents, images, JSON, CSV, Markdown, and plain text. " +
-      "Why does this matter? Because documentation work does not start with clean files. " +
+      "Documentation work does not start with clean files. " +
       "It starts with a spec exported from Confluence, a Word document full of tracked changes, " +
       "or a photograph of a whiteboard. " +
-      "DocCraft reads whatever you actually have — not whatever you wish you had.",
-    duration: 11000,
+      "DocCraft reads what you actually have.",
+    duration: 10000,
   },
   {
     id: "gap",
     title: "Step 2 — Gap Analysis",
     subtitle: "Find what's missing before you write.",
     narration:
-      "Step two is gap analysis — and this is the feature that makes DocCraft different. " +
+      "Step two is gap analysis, and this is the feature that makes DocCraft different. " +
+      "The most common failure in AI documentation is confident output from incomplete input. " +
       "Before generating a single word, DocCraft reads your content and identifies what is absent. " +
       "Not what is poorly written. What is missing entirely. " +
       "It surfaces three types of gaps: facts the document requires but does not contain, " +
-      "statements that could mean two different things, and assumptions the audience does not share. " +
-      "Why does this exist? Because the most common failure in AI documentation is confident output from incomplete input.",
+      "statements that could mean two different things, and assumptions the audience does not share.",
     duration: 12000,
   },
   {
@@ -53,13 +51,12 @@ const STEPS = [
     title: "Step 3 — Generate",
     subtitle: "Audience-aware. Structure-first.",
     narration:
-      "Step three is generation. You choose the document type — API Reference, User Guide, Quick Start, Troubleshooting. " +
+      "Step three is generation. You choose the document type: API Reference, User Guide, Quick Start, Troubleshooting. " +
       "You set the audience level and the tone. " +
       "Then DocCraft writes from your gap analysis answers, not just the raw source. " +
-      "Why does this produce better output? " +
-      "Because ninety seconds of structured input gathering before generation changes what the model writes. " +
-      "Not the model size. Not the prompt engineering. The preparation.",
-    duration: 11000,
+      "Ninety seconds of structured input gathering before generation changes what comes out " +
+      "more than any model upgrade or prompt refinement can.",
+    duration: 10000,
   },
   {
     id: "compliance",
@@ -67,12 +64,11 @@ const STEPS = [
     subtitle: "Microsoft Style Guide. Automatic.",
     narration:
       "Step four is the compliance check. " +
-      "The moment DocCraft generates a document, it runs a Microsoft Style Guide audit — automatically, before you read the draft. " +
+      "The moment DocCraft generates a document, it runs a Microsoft Style Guide audit automatically, before you read the draft. " +
       "It flags passive voice, incorrect heading case, procedure steps missing imperative verbs, and forbidden terms like simply and just. " +
-      "Why does it run automatically rather than on request? " +
-      "Because compliance flags are only useful before you have read the draft and accepted the problems. " +
+      "It runs automatically because compliance flags are only useful before you have read the draft and normalized the problems. " +
       "A flag alongside the first draft gets acted on. A flag three minutes later gets dismissed.",
-    duration: 12000,
+    duration: 11000,
   },
   {
     id: "edit",
@@ -81,11 +77,9 @@ const STEPS = [
     narration:
       "Step five is editing and export. " +
       "The inline editor lets you refine the document, generate Mermaid diagrams directly from the content, and create visual infographics. " +
-      "Export as Markdown, HTML, or PDF. Sign in to save to your cloud document library or publish directly to GitHub. " +
-      "Why these export options? Because documentation lives in different systems — " +
-      "GitHub repositories, Confluence spaces, help centres — " +
-      "and DocCraft meets it where it needs to go.",
-    duration: 11000,
+      "When the document is ready, export as Markdown, HTML, or PDF, save to your cloud document library, or publish directly to GitHub. " +
+      "From messy source material to publication-ready output, without leaving the tool.",
+    duration: 9000,
   },
   {
     id: "outro",
@@ -94,10 +88,9 @@ const STEPS = [
     narration:
       "DocCraft is free, runs in your browser, and requires no installation. " +
       "The gap analysis is the differentiator. " +
-      "No other documentation tool I have tested asks what is missing before it writes. " +
-      "That question changes what gets generated in a way that no amount of prompt engineering or model scaling can replicate. " +
-      "Open DocCraft now and run it against your own source material. " +
-      "See what it finds before it writes a word.",
+      "That question — what is missing before you write — changes what gets generated in a way that model scaling and prompt engineering cannot replicate. " +
+      "Open DocCraft, upload your next real piece of source material, and run the gap analysis. " +
+      "See what it finds before it writes a word. Then tell me what it missed.",
     duration: 11000,
   },
 ];
