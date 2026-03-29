@@ -12,7 +12,7 @@ const MOOD_LABELS: Record<string, string> = {
 
 export async function POST(req: NextRequest) {
   try {
-    const { mood, message } = await req.json();
+    const { mood, email, message } = await req.json();
 
     if (!mood || !MOOD_LABELS[mood]) {
       return NextResponse.json({ error: "Invalid mood" }, { status: 400 });
@@ -23,8 +23,9 @@ export async function POST(req: NextRequest) {
       req.headers.get("x-real-ip") ??
       "unknown";
     const maskedIp = ip.replace(/\.\d+$/, ".x");
-    const moodLabel = MOOD_LABELS[mood];
+    const moodLabel  = MOOD_LABELS[mood];
     const hasMessage = !!message?.trim();
+    const hasEmail   = !!email?.trim() && /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(email.trim());
 
     // ── 1. Track event (fire-and-forget) ────────────────────────────────────
     const origin = req.nextUrl.origin;
@@ -33,7 +34,7 @@ export async function POST(req: NextRequest) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         event: "feedback_submitted",
-        properties: { mood, hasMessage, ip: maskedIp },
+        properties: { mood, hasMessage, hasEmail, ip: maskedIp },
       }),
     }).catch(() => {});
 
@@ -56,6 +57,15 @@ export async function POST(req: NextRequest) {
                 ${hasMessage
                   ? `<blockquote style="margin:0;padding:8px 12px;border-left:3px solid #6366f1;background:#f8fafc;border-radius:4px;color:#334155">${message.trim()}</blockquote>`
                   : `<em style="color:#94a3b8">No message provided.</em>`
+                }
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:8px 0;color:#64748b;vertical-align:top">From</td>
+              <td style="padding:8px 0;color:#1e293b">
+                ${hasEmail
+                  ? `<a href="mailto:${email.trim()}" style="color:#6366f1">${email.trim()}</a>`
+                  : `<em style="color:#94a3b8">Anonymous</em>`
                 }
               </td>
             </tr>

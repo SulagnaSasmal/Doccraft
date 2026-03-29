@@ -10,30 +10,50 @@ const MOODS = [
   { emoji: "🤩", label: "Love it!",   value: "love" },
 ];
 
-export default function FeedbackWidget() {
-  const [open, setOpen]       = useState(false);
-  const [mood, setMood]       = useState<string | null>(null);
-  const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [done, setDone]       = useState(false);
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
-  const reset = () => { setMood(null); setMessage(""); setDone(false); };
+export default function FeedbackWidget() {
+  const [open, setOpen]           = useState(false);
+  const [mood, setMood]           = useState<string | null>(null);
+  const [email, setEmail]         = useState("");
+  const [emailError, setEmailError] = useState("");
+  const [message, setMessage]     = useState("");
+  const [loading, setLoading]     = useState(false);
+  const [done, setDone]           = useState(false);
+
+  const reset = () => {
+    setMood(null);
+    setEmail("");
+    setEmailError("");
+    setMessage("");
+    setDone(false);
+  };
 
   const handleOpen = () => {
-    setOpen((v) => {
-      if (!v) reset();
-      return !v;
-    });
+    setOpen((v) => { if (!v) reset(); return !v; });
+  };
+
+  const validateEmail = (val: string) => {
+    if (!val.trim()) return ""; // optional — blank is fine
+    if (!EMAIL_RE.test(val.trim())) return "Enter a valid email address";
+    return "";
   };
 
   const submit = async () => {
+    const err = validateEmail(email);
+    if (err) { setEmailError(err); return; }
     if (!mood || loading) return;
+
     setLoading(true);
     try {
       await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mood, message: message.trim() }),
+        body: JSON.stringify({
+          mood,
+          email: email.trim() || undefined,
+          message: message.trim() || undefined,
+        }),
       });
       setDone(true);
       setTimeout(() => { setOpen(false); reset(); }, 2500);
@@ -46,7 +66,7 @@ export default function FeedbackWidget() {
 
   return (
     <>
-      {/* Floating trigger — bottom-left so it doesn't clash with HelpAgent */}
+      {/* Floating trigger — bottom-left, won't clash with HelpAgent bottom-right */}
       <button
         type="button"
         onClick={handleOpen}
@@ -81,9 +101,8 @@ export default function FeedbackWidget() {
             </button>
           </div>
 
-          <div className="px-4 py-4">
+          <div className="px-4 py-4 space-y-3">
             {done ? (
-              /* Thank-you state */
               <div className="flex flex-col items-center gap-2 py-4 text-center animate-fade-in-up">
                 <CheckCircle2 size={28} className="text-green-400" />
                 <p className="text-sm font-medium text-slate-200">Thank you!</p>
@@ -91,12 +110,12 @@ export default function FeedbackWidget() {
               </div>
             ) : (
               <>
-                <p className="text-[0.72rem] text-slate-400 mb-3">
+                <p className="text-[0.72rem] text-slate-400">
                   How is your experience with DocCraft?
                 </p>
 
                 {/* Mood picker */}
-                <div className="flex justify-between mb-4">
+                <div className="flex justify-between">
                   {MOODS.map((m) => (
                     <button
                       key={m.value}
@@ -115,6 +134,27 @@ export default function FeedbackWidget() {
                   ))}
                 </div>
 
+                {/* Email — optional but validated if provided */}
+                <div>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setEmailError(""); }}
+                    onBlur={() => setEmailError(validateEmail(email))}
+                    placeholder="Your email (optional)"
+                    className={`w-full bg-slate-800 border rounded-xl px-3 py-2
+                               text-[0.72rem] text-slate-200 placeholder:text-slate-600
+                               outline-none focus:ring-1 transition-colors
+                               ${emailError
+                                 ? "border-red-500/60 focus:ring-red-500/30"
+                                 : "border-slate-700/50 focus:ring-blue-500/40"
+                               }`}
+                  />
+                  {emailError && (
+                    <p className="text-[0.62rem] text-red-400 mt-1 pl-1">{emailError}</p>
+                  )}
+                </div>
+
                 {/* Optional message */}
                 <textarea
                   value={message}
@@ -124,7 +164,7 @@ export default function FeedbackWidget() {
                   rows={3}
                   className="w-full bg-slate-800 border border-slate-700/50 rounded-xl px-3 py-2
                              text-[0.72rem] text-slate-200 placeholder:text-slate-600
-                             resize-none outline-none focus:ring-1 focus:ring-blue-500/40 mb-3"
+                             resize-none outline-none focus:ring-1 focus:ring-blue-500/40"
                 />
 
                 <button
@@ -135,10 +175,7 @@ export default function FeedbackWidget() {
                              bg-blue-600 hover:bg-blue-700 disabled:opacity-30
                              text-white text-xs font-medium transition-colors"
                 >
-                  {loading
-                    ? <Loader2 size={13} className="animate-spin" />
-                    : <Send size={13} />
-                  }
+                  {loading ? <Loader2 size={13} className="animate-spin" /> : <Send size={13} />}
                   {loading ? "Sending…" : "Submit feedback"}
                 </button>
               </>

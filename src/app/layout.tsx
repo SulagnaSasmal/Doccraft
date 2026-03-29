@@ -4,6 +4,8 @@ import { Inter } from "next/font/google";
 import { cn } from "@/lib/utils";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { Analytics } from "@vercel/analytics/react";
+import HelpAgent from "@/components/HelpAgent";
+import FeedbackWidget from "@/components/FeedbackWidget";
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" });
 
@@ -40,6 +42,8 @@ export default function RootLayout({
         <TooltipProvider>
           {children}
         </TooltipProvider>
+        <HelpAgent />
+        <FeedbackWidget />
         <Analytics />
       </body>
     </html>

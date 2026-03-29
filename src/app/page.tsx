@@ -25,8 +25,6 @@ import {
 import UtilityToolbox from "@/components/doccraft/UtilityToolbox";
 import DocumentLibrary from "@/components/doccraft/DocumentLibrary";
 import OnboardingTour from "@/components/OnboardingTour";
-import HelpAgent from "@/components/HelpAgent";
-import FeedbackWidget from "@/components/FeedbackWidget";
 
 export type AppStage = "upload" | "analyzing" | "questions" | "generating" | "editing";
 
@@ -1300,11 +1298,6 @@ export default function Home() {
       {/* First-run onboarding tour */}
       <OnboardingTour />
 
-      {/* Floating AI Help Agent */}
-      <HelpAgent />
-
-      {/* Floating Feedback Widget — bottom-left */}
-      <FeedbackWidget />
     </div>
   );
 }
