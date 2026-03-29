@@ -30,6 +30,8 @@ export default function UploadPanel({
   const [dragFileTypes, setDragFileTypes] = useState<string[]>([]);
   const [pasteMode, setPasteMode] = useState(false);
   const [pasteText, setPasteText] = useState("");
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingName, setProcessingName] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleDrag = (e: DragEvent, enter: boolean) => {
@@ -58,40 +60,57 @@ export default function UploadPanel({
   const processFiles = async (files: FileList) => {
     const contents: string[] = [];
     const names: string[] = [];
+    setIsProcessing(true);
 
     for (const file of Array.from(files)) {
       names.push(file.name);
+      setProcessingName(file.name);
+
+      const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+      const isImage = file.type.startsWith("image/");
+      const isDocx =
+        file.type.includes("word") ||
+        file.type.includes("officedocument") ||
+        file.name.toLowerCase().endsWith(".docx") ||
+        file.name.toLowerCase().endsWith(".doc");
 
       if (file.type === "text/plain" || file.name.endsWith(".md") || file.name.endsWith(".csv")) {
         contents.push(await file.text());
-      } else if (file.type.startsWith("image/")) {
-        const base64 = await fileToBase64(file);
-        contents.push(`[Image: ${file.name}]\n(Image uploaded — will be analyzed by AI vision)\nBase64 data available for processing.`);
       } else if (file.name.endsWith(".json")) {
-        const text = await file.text();
-        contents.push(`[JSON File: ${file.name}]\n${text}`);
-      } else {
-        contents.push(`[File: ${file.name}] (${file.type || "unknown type"}) — Content extracted on upload.`);
+        contents.push(`[JSON File: ${file.name}]\n${await file.text()}`);
+      } else if (isPdf || isImage) {
+        // Route through /api/ocr — server-side PDF parser + OpenAI Vision for images
         try {
-          const text = await file.text();
-          contents.push(text);
+          const fd = new FormData();
+          fd.append("files", file);
+          const res = await fetch("/api/ocr", { method: "POST", body: fd });
+          const data = await res.json();
+          if (data.combined && data.combined.trim().length > 10) {
+            contents.push(data.combined.trim());
+          } else if (data.results?.[0]?.error) {
+            contents.push(`[${file.name}] — ${data.results[0].error}`);
+          } else {
+            contents.push(`[${file.name}] — No readable text found. Try copy-pasting the content instead.`);
+          }
         } catch {
-          contents.push("(Binary file — text extraction not available in browser. For PDF/DOCX support, connect a backend parser.)");
+          contents.push(`[${file.name}] — Extraction failed. Try copy-pasting the content instead.`);
         }
+      } else if (isDocx) {
+        // DOCX is binary — file.text() would produce garbled output
+        contents.push(
+          `[${file.name}] — DOCX files cannot be read directly in the browser.\n` +
+          `Please open the document and copy-paste its text content using the Paste tab.`
+        );
+      } else {
+        contents.push(`[${file.name}] — Unsupported format. Try copy-pasting the content using the Paste tab.`);
       }
     }
 
     const combined = (uploadedContent ? uploadedContent + "\n\n---\n\n" : "") + contents.join("\n\n---\n\n");
     onContentChange(combined, [...fileNames, ...names]);
+    setIsProcessing(false);
+    setProcessingName("");
   };
-
-  const fileToBase64 = (file: File): Promise<string> =>
-    new Promise((res, rej) => {
-      const reader = new FileReader();
-      reader.onload = () => res(reader.result as string);
-      reader.onerror = rej;
-      reader.readAsDataURL(file);
-    });
 
   const handleDrop = (e: DragEvent) => {
     e.preventDefault();
@@ -145,15 +164,17 @@ export default function UploadPanel({
       <div className="p-5">
         {!pasteMode ? (
           <div
-            onDragEnter={(e) => handleDrag(e, true)}
+            onDragEnter={(e) => !isProcessing && handleDrag(e, true)}
             onDragLeave={(e) => handleDrag(e, false)}
             onDragOver={(e) => e.preventDefault()}
-            onDrop={handleDrop}
-            onClick={() => fileInputRef.current?.click()}
-            className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-200 ${
-              isDragging
-                ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 drop-zone-active"
-                : "border-surface-4 hover:border-brand-300 hover:bg-surface-1"
+            onDrop={(e) => !isProcessing && handleDrop(e)}
+            onClick={() => !isProcessing && fileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-200 ${
+              isProcessing
+                ? "border-surface-3 bg-surface-1 cursor-wait"
+                : isDragging
+                ? "border-brand-500 bg-brand-50 dark:bg-brand-900/20 drop-zone-active cursor-pointer"
+                : "border-surface-4 hover:border-brand-300 hover:bg-surface-1 cursor-pointer"
             }`}
           >
             <input
@@ -165,8 +186,16 @@ export default function UploadPanel({
               className="hidden"
             />
 
-            {/* Smart drag-over: show detected file type actions */}
-            {isDragging && dragFileTypes.length > 0 ? (
+            {/* Processing state */}
+            {isProcessing ? (
+              <div className="animate-fade-in-up">
+                <div className="w-12 h-12 bg-brand-100 dark:bg-brand-900/40 rounded-xl flex items-center justify-center mx-auto mb-3">
+                  <Upload size={22} className="text-brand-600 animate-bounce" />
+                </div>
+                <p className="font-medium text-ink-1 text-sm">Extracting text…</p>
+                <p className="text-xs text-ink-3 mt-1 truncate max-w-[200px] mx-auto">{processingName}</p>
+              </div>
+            ) : isDragging && dragFileTypes.length > 0 ? (
               <div className="animate-fade-in-up">
                 <div className="w-12 h-12 bg-brand-100 dark:bg-brand-900/40 rounded-xl flex items-center justify-center mx-auto mb-3">
                   <Upload size={22} className="text-brand-600" />
