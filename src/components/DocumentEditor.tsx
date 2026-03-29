@@ -28,6 +28,8 @@ import {
   Type,
   ListOrdered,
   Eraser,
+  ChevronDown,
+  Pencil,
 } from "lucide-react";
 import LintingPanel from "@/components/LintingPanel";
 import InfographicPanel from "@/components/InfographicPanel";
@@ -72,6 +74,8 @@ export default function DocumentEditor({
   cloudSaving,
   cloudSaved,
   isLoggedIn,
+  docTitle,
+  onTitleChange,
 }: {
   content: string;
   onChange: (c: string) => void;
@@ -86,6 +90,8 @@ export default function DocumentEditor({
   cloudSaving?: boolean;
   cloudSaved?: boolean;
   isLoggedIn?: boolean;
+  docTitle?: string;
+  onTitleChange?: (t: string) => void;
 }) {
   const [view, setView] = useState<"split" | "edit" | "preview">("split");
   const [refining, setRefining] = useState(false);
@@ -105,7 +111,11 @@ export default function DocumentEditor({
   const [showLinting, setShowLinting] = useState(false);
   const [styleGuide, setStyleGuide] = useState<"mstp" | "google">("mstp");
   const [inlineToolbar, setInlineToolbar] = useState<{ top: number; left: number } | null>(null);
+  const [showMore, setShowMore] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const moreRef = useRef<HTMLDivElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -310,8 +320,9 @@ ${bodyHTML}
 </html>`;
   };
 
-  const exportHTML = () => downloadTextFile(buildHTMLExport(), "documentation.html", "text/html;charset=utf-8");
-  const exportMarkdown = () => downloadTextFile(content, "documentation.md", "text/markdown");
+  const fileSlug = (docTitle || "documentation").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "documentation";
+  const exportHTML = () => downloadTextFile(buildHTMLExport(), `${fileSlug}.html`, "text/html;charset=utf-8");
+  const exportMarkdown = () => downloadTextFile(content, `${fileSlug}.md`, "text/markdown");
 
   const downloadTextFile = (data: string, filename: string, type: string) => {
     const blob = new Blob([data], { type });
@@ -384,7 +395,7 @@ ${bodyHTML}
       });
 
       const blob = await Packer.toBlob(doc);
-      downloadBlob(blob, "documentation.docx");
+      downloadBlob(blob, `${fileSlug}.docx`);
     } catch (err) {
       console.error("DOCX export error:", err);
     } finally {
@@ -423,6 +434,22 @@ ${bodyHTML}
     if (content) runComplianceCheck(content);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Close More dropdown on outside click
+  useEffect(() => {
+    const handler = (e: MouseEvent) => {
+      if (moreRef.current && !moreRef.current.contains(e.target as Node)) {
+        setShowMore(false);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  // Focus title input when entering edit mode
+  useEffect(() => {
+    if (editingTitle) titleInputRef.current?.select();
+  }, [editingTitle]);
 
   const handleComplianceCheck = () => {
     if (showCompliance && complianceRan) {
@@ -473,8 +500,36 @@ ${bodyHTML}
 
   return (
     <div className="animate-fade-in-up">
+
+      {/* Editable document title */}
+      <div className="bg-surface-0 rounded-t-2xl border border-surface-3 border-b border-surface-2 px-4 py-2.5 flex items-center gap-2">
+        {editingTitle ? (
+          <input
+            ref={titleInputRef}
+            value={docTitle}
+            onChange={(e) => onTitleChange?.(e.target.value)}
+            onBlur={() => setEditingTitle(false)}
+            onKeyDown={(e) => { if (e.key === "Enter" || e.key === "Escape") setEditingTitle(false); }}
+            placeholder="Untitled document"
+            className="flex-1 text-sm font-semibold text-ink-0 bg-transparent border-none outline-none focus:ring-1 focus:ring-brand-400 rounded px-1"
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setEditingTitle(true)}
+            className="flex items-center gap-1.5 text-sm font-semibold text-ink-0 hover:text-brand-600 transition-colors group"
+            title="Click to rename"
+          >
+            <span className={docTitle ? "text-ink-0" : "text-ink-4"}>
+              {docTitle || "Untitled document"}
+            </span>
+            <Pencil size={11} className="text-ink-4 opacity-0 group-hover:opacity-100 transition-opacity" />
+          </button>
+        )}
+      </div>
+
       {/* Toolbar */}
-      <div className="bg-surface-0 rounded-t-2xl border border-surface-3 border-b-0 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
+      <div className="bg-surface-0 border border-surface-3 border-t-0 border-b-0 px-4 py-3 flex items-center justify-between flex-wrap gap-3">
         <div className="flex items-center gap-4">
           {/* View toggle */}
           <div className="flex bg-surface-1 rounded-lg p-0.5 border border-surface-2">
@@ -523,76 +578,92 @@ ${bodyHTML}
 
         {/* Right-side controls */}
         <div className="flex items-center gap-2 flex-wrap">
-          {/* Diagram button */}
-          <button
-            onClick={() => setShowDiff((state) => !state)}
-            disabled={versionOptions.length === 0}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border disabled:opacity-40 ${
-              showDiff
-                ? "bg-brand-50 text-brand-700 border-brand-200"
-                : "text-ink-2 hover:bg-surface-2 border-surface-3"
-            }`}
-            title="Compare this draft with earlier versions"
-          >
-            <GitCompare size={13} />
-            Diff
-          </button>
 
-          <button
-            onClick={() => setShowRules((state) => !state)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border ${
-              showRules
-                ? "bg-brand-50 text-brand-700 border-brand-200"
-                : "text-ink-2 hover:bg-surface-2 border-surface-3"
-            }`}
-            title="Manage custom compliance rules"
-          >
-            <ShieldPlus size={13} />
-            Rules
-            {customRules.length > 0 && (
-              <span className="px-1.5 py-0.5 rounded-full bg-surface-0 border border-brand-200 text-[0.62rem] font-bold">
-                {customRules.length}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => setShowLinting((s) => !s)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border ${
-              showLinting
-                ? "bg-brand-50 text-brand-700 border-brand-200"
-                : "text-ink-2 hover:bg-surface-2 border-surface-3"
-            }`}
-            title="Style guide linting"
-          >
-            <Sparkles size={13} />
-            Lint
-          </button>
-
-          {onSaveVersion && (
+          {/* More ▾ dropdown — groups Diff, Rules, Lint, Snapshot, Diagram */}
+          <div ref={moreRef} className="relative">
             <button
-              onClick={onSaveVersion}
-              className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border border-surface-3 text-ink-2 hover:bg-surface-2"
-              title="Save this draft as a snapshot for later comparison"
+              type="button"
+              onClick={() => setShowMore((v) => !v)}
+              className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg transition-colors border ${
+                showMore || showDiff || showRules || showLinting || showDiagram
+                  ? "bg-brand-50 text-brand-700 border-brand-200"
+                  : "text-ink-2 hover:bg-surface-2 border-surface-3"
+              }`}
             >
-              <Camera size={13} />
-              Snapshot
+              More
+              <ChevronDown size={11} className={`transition-transform ${showMore ? "rotate-180" : ""}`} />
+              {/* Dot indicator when any sub-panel is active */}
+              {(showDiff || showRules || showLinting || showDiagram || customRules.length > 0) && (
+                <span className="w-1.5 h-1.5 rounded-full bg-brand-500 -mr-0.5" />
+              )}
             </button>
-          )}
 
-          <button
-            onClick={() => setShowDiagram((s) => !s)}
-            className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg
-                        transition-colors border
-                        ${showDiagram
-                          ? "bg-brand-50 text-brand-700 border-brand-200"
-                          : "text-ink-2 hover:bg-surface-2 border-surface-3"
-                        }`}
-            title="Generate a Mermaid diagram from your document"
-          >
-            <GitGraph size={13} />
-            Diagram
-          </button>
+            {showMore && (
+              <div className="absolute right-0 top-full mt-1.5 z-50 w-44 rounded-xl border border-surface-3 bg-surface-0 shadow-xl overflow-hidden">
+                {/* Diff */}
+                <button
+                  type="button"
+                  onClick={() => { setShowDiff((s) => !s); setShowMore(false); }}
+                  disabled={versionOptions.length === 0}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs transition-colors disabled:opacity-40 ${
+                    showDiff ? "bg-brand-50 text-brand-700" : "text-ink-2 hover:bg-surface-1"
+                  }`}
+                >
+                  <GitCompare size={13} />
+                  Version Diff
+                </button>
+                {/* Rules */}
+                <button
+                  type="button"
+                  onClick={() => { setShowRules((s) => !s); setShowMore(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs transition-colors ${
+                    showRules ? "bg-brand-50 text-brand-700" : "text-ink-2 hover:bg-surface-1"
+                  }`}
+                >
+                  <ShieldPlus size={13} />
+                  Custom Rules
+                  {customRules.length > 0 && (
+                    <span className="ml-auto px-1.5 py-0.5 rounded-full bg-brand-100 text-brand-700 text-[0.6rem] font-bold">
+                      {customRules.length}
+                    </span>
+                  )}
+                </button>
+                {/* Lint */}
+                <button
+                  type="button"
+                  onClick={() => { setShowLinting((s) => !s); setShowMore(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs transition-colors ${
+                    showLinting ? "bg-brand-50 text-brand-700" : "text-ink-2 hover:bg-surface-1"
+                  }`}
+                >
+                  <Sparkles size={13} />
+                  Style Lint
+                </button>
+                {/* Snapshot */}
+                {onSaveVersion && (
+                  <button
+                    type="button"
+                    onClick={() => { onSaveVersion(); setShowMore(false); }}
+                    className="w-full flex items-center gap-2.5 px-3 py-2 text-xs text-ink-2 hover:bg-surface-1 transition-colors"
+                  >
+                    <Camera size={13} />
+                    Save Snapshot
+                  </button>
+                )}
+                {/* Diagram */}
+                <button
+                  type="button"
+                  onClick={() => { setShowDiagram((s) => !s); setShowMore(false); }}
+                  className={`w-full flex items-center gap-2.5 px-3 py-2 text-xs transition-colors ${
+                    showDiagram ? "bg-brand-50 text-brand-700" : "text-ink-2 hover:bg-surface-1"
+                  }`}
+                >
+                  <GitGraph size={13} />
+                  Diagram
+                </button>
+              </div>
+            )}
+          </div>
 
           {/* Style guide toggle + Compliance check */}
           <div className="flex items-center rounded-lg border border-surface-3 overflow-hidden">

@@ -20,9 +20,11 @@ import {
   FileText, Upload, Sun, Moon, RotateCcw,
   Download, Copy, Users, Webhook, Palette,
   Search, Scissors, Layers, ScanText, GitGraph, ImageIcon,
+  PanelLeft, Keyboard,
 } from "lucide-react";
 import UtilityToolbox from "@/components/doccraft/UtilityToolbox";
 import DocumentLibrary from "@/components/doccraft/DocumentLibrary";
+import OnboardingTour from "@/components/OnboardingTour";
 
 export type AppStage = "upload" | "analyzing" | "questions" | "generating" | "editing";
 
@@ -119,6 +121,11 @@ export default function Home() {
   const [showBrandKit, setShowBrandKit] = useState(false);
   const { theme, toggle: toggleTheme, isDark } = useTheme();
 
+  // T3: Document title, right panel tab, left panel visibility
+  const [docTitle, setDocTitle] = useState("");
+  const [rightTab, setRightTab] = useState<"insights" | "shortcuts">("insights");
+  const [leftOpen, setLeftOpen] = useState(true);
+
   // CMD+K keyboard shortcut for command palette
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -142,7 +149,7 @@ export default function Home() {
     try { sessionStorage.setItem("doccraft_draft", generatedDoc); } catch {}
   }, [generatedDoc]);
 
-  // Restore draft from sessionStorage on mount
+  // Restore draft + title from sessionStorage on mount
   useEffect(() => {
     try {
       const draft = sessionStorage.getItem("doccraft_draft");
@@ -151,9 +158,16 @@ export default function Home() {
         setBaselineDoc(draft);
         setStage("editing");
       }
+      const savedTitle = sessionStorage.getItem("doccraft_title");
+      if (savedTitle) setDocTitle(savedTitle);
     } catch {}
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Persist doc title to sessionStorage
+  useEffect(() => {
+    try { sessionStorage.setItem("doccraft_title", docTitle); } catch {}
+  }, [docTitle]);
 
   // ── OCR handoff: pre-load text extracted by /ocr page ──────────────────
   useEffect(() => {
@@ -487,7 +501,11 @@ export default function Home() {
     setError("");
     setRecommendation(null);
     setRecDismissed(false);
-    try { sessionStorage.removeItem("doccraft_draft"); } catch {}
+    try {
+      sessionStorage.removeItem("doccraft_draft");
+      sessionStorage.removeItem("doccraft_title");
+    } catch {}
+    setDocTitle("");
   };
 
   const handleRestoreSession = (session: DocSession) => {
@@ -564,8 +582,11 @@ export default function Home() {
       {/* ── Business Hub — three-column layout ──────────────────────── */}
       <div className="flex-1 flex overflow-hidden" style={{ minHeight: 0 }}>
 
-        {/* Left: Utility Toolbox (resizable) */}
-        <div style={{ width: leftWidth }} className="shrink-0 flex flex-col overflow-hidden relative">
+        {/* Left: Utility Toolbox (resizable, collapsible) */}
+        <div
+          style={leftOpen ? { width: leftWidth } : { width: 0 }}
+          className="shrink-0 flex flex-col overflow-hidden relative transition-all duration-200"
+        >
           <UtilityToolbox
             uploadedContent={uploadedContent}
             fileNames={fileNames}
@@ -604,6 +625,18 @@ export default function Home() {
 
         {/* Center: Workspace */}
         <main className="flex-1 flex flex-col overflow-hidden border-x border-slate-800 custom-scrollbar">
+          {/* Left panel toggle — always visible */}
+          <div className="shrink-0 flex items-center gap-2 px-3 py-1.5 border-b border-slate-800/60 bg-slate-950/60">
+            <button
+              type="button"
+              onClick={() => setLeftOpen((v) => !v)}
+              className="flex items-center gap-1.5 px-2 py-1 text-[0.68rem] font-medium text-slate-500 hover:text-slate-300 hover:bg-slate-800 rounded-md transition-colors"
+              title={leftOpen ? "Collapse configuration panel" : "Expand configuration panel"}
+            >
+              <PanelLeft size={13} className={`transition-transform ${leftOpen ? "" : "rotate-180"}`} />
+              {leftOpen ? "Hide panel" : "Show panel"}
+            </button>
+          </div>
 
           {(stage === "upload" || stage === "analyzing") && (
             !uploadedContent ? (
@@ -848,6 +881,8 @@ export default function Home() {
                 cloudSaving={cloudSaving}
                 cloudSaved={cloudSaved}
                 isLoggedIn={!!user}
+                docTitle={docTitle}
+                onTitleChange={setDocTitle}
               />
             </div>
           )}
@@ -857,12 +892,89 @@ export default function Home() {
         <aside
           className="w-[220px] shrink-0 flex flex-col overflow-hidden border-l border-slate-800/60 bg-slate-900/80"
         >
-          <div className="px-4 py-3.5 border-b border-slate-800/60">
-            <h2 className="text-[0.7rem] font-bold uppercase tracking-widest text-slate-500">
-              Document Insights
-            </h2>
+          {/* Tab bar */}
+          <div className="flex items-center border-b border-slate-800/60 shrink-0">
+            {(["insights", "shortcuts"] as const).map((tab) => (
+              <button
+                key={tab}
+                type="button"
+                onClick={() => setRightTab(tab)}
+                className={`flex-1 flex items-center justify-center gap-1.5 py-2.5 text-[0.65rem] font-semibold uppercase tracking-wider transition-colors ${
+                  rightTab === tab
+                    ? "text-blue-400 border-b-2 border-blue-500"
+                    : "text-slate-600 hover:text-slate-400"
+                }`}
+              >
+                {tab === "insights" ? (
+                  <><Sparkles size={10} />{" "}Insights</>
+                ) : (
+                  <><Keyboard size={10} />{" "}Shortcuts</>
+                )}
+              </button>
+            ))}
           </div>
+
           <div className="flex-1 overflow-auto px-3 py-3 space-y-3">
+
+          {/* ── SHORTCUTS TAB ── */}
+          {rightTab === "shortcuts" && (
+            <div className="space-y-3">
+              <div className="px-3 py-2.5 bg-slate-800/30 border border-slate-700/40 rounded-xl">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                  Global
+                </p>
+                <div className="space-y-1.5">
+                  {[
+                    { keys: "Ctrl K", action: "Command palette" },
+                    { keys: "Ctrl Z", action: "Undo in editor" },
+                  ].map(({ keys, action }) => (
+                    <div key={keys} className="flex items-center justify-between gap-2">
+                      <span className="text-[0.62rem] text-slate-500">{action}</span>
+                      <kbd className="px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[0.58rem] font-mono text-slate-400 whitespace-nowrap">{keys}</kbd>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="px-3 py-2.5 bg-slate-800/30 border border-slate-700/40 rounded-xl">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                  Editor
+                </p>
+                <div className="space-y-1.5">
+                  {[
+                    { keys: "Select + AI action", action: "Refine selection" },
+                    { keys: "Drag handle", action: "Resize left panel" },
+                    { keys: "Hide panel btn", action: "Collapse sidebar" },
+                  ].map(({ keys, action }) => (
+                    <div key={keys} className="flex items-start justify-between gap-2">
+                      <span className="text-[0.62rem] text-slate-500 leading-relaxed">{action}</span>
+                      <kbd className="mt-0.5 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[0.58rem] font-mono text-slate-400 whitespace-nowrap shrink-0">{keys}</kbd>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              <div className="px-3 py-2.5 bg-slate-800/30 border border-slate-700/40 rounded-xl">
+                <p className="text-[0.68rem] font-semibold uppercase tracking-wider text-slate-500 mb-2">
+                  Export
+                </p>
+                <div className="space-y-1.5">
+                  {[
+                    { keys: "Copy .md", action: "Clipboard as Markdown" },
+                    { keys: "Plain text", action: "Clipboard, no symbols" },
+                    { keys: "Export HTML", action: "Branded HTML page" },
+                    { keys: ".docx", action: "Word document" },
+                  ].map(({ keys, action }) => (
+                    <div key={keys} className="flex items-start justify-between gap-2">
+                      <span className="text-[0.62rem] text-slate-500 leading-relaxed">{action}</span>
+                      <kbd className="mt-0.5 px-1.5 py-0.5 rounded bg-slate-800 border border-slate-700 text-[0.58rem] font-mono text-slate-400 whitespace-nowrap shrink-0">{keys}</kbd>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* ── INSIGHTS TAB ── */}
+          {rightTab === "insights" && (<>
 
             {/* Empty state — shown until content is loaded */}
             {stage === "upload" && fileNames.length === 0 && (
@@ -1024,7 +1136,10 @@ export default function Home() {
                 ))}
               </div>
             </div>
-          </div>
+          </> /* end insights tab */
+          )}
+
+          </div>{/* end scroll area */}
         </aside>
 
       </div>
@@ -1074,6 +1189,9 @@ export default function Home() {
           </div>
         </div>
       )}
+
+      {/* First-run onboarding tour */}
+      <OnboardingTour />
     </div>
   );
 }
